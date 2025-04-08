@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .profile-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .profile-card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+            background-color: rgba(74, 108, 247, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .profile-avatar i {
+            font-size: 50px;
+            color: var(--primary-color);
+        }
+
+        .profile-header h2 {
+            color: var(--dark-color);
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .profile-info {
+            display: grid;
+            gap: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            color: var(--secondary-color);
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: var(--dark-color);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h2><%= user.username %></h2>
+            </div>
+            <div class="profile-info">
+                <div class="info-item">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value"><%= user.email || 'Not provided' %></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Account Type:</span>
+                    <span class="info-value"><%= user.googleId ? 'Google' : 'Local' %></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Member Since:</span>
+                    <span class="info-value"><%= new Date(user.createdAt).toLocaleDateString() %></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
