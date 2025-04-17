@@ -18,7 +18,7 @@ app.use(express.static('public'));
 
 // Session configuration
 app.use(session({
-    secret: 'keyboard cat',
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false
 }));
@@ -27,18 +27,33 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // MONGOOSE
-mongoose.connect('mongodb+srv://mesum357:pDliM118811@cluster0.h3knh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
+const mongooseOptions = {
     useNewUrlParser: true,
-    useUnifiedTopology: true,
-    ssl: true,
-    tls: true,
-    tlsAllowInvalidCertificates: true,
-    tlsAllowInvalidHostnames: true
-}).then(() => {
-    console.log("Connected to MongoDB Atlas");
-}).catch((err) => {
-    console.log("Error connecting to MongoDB Atlas:", err);
-});
+    useUnifiedTopology: true
+};
+
+if (process.env.NODE_ENV === 'production') {
+    mongooseOptions.ssl = true;
+    mongooseOptions.tls = true;
+    mongooseOptions.tlsAllowInvalidCertificates = true;
+    mongooseOptions.tlsAllowInvalidHostnames = true;
+}
+
+// Get MongoDB URI from environment or use default
+const mongoURI = process.env.MONGODB_URI;
+if (!mongoURI) {
+    console.error("MONGODB_URI is not defined in environment variables");
+    process.exit(1);
+}
+
+mongoose.connect(mongoURI, mongooseOptions)
+    .then(() => {
+        console.log("Connected to MongoDB Atlas");
+    })
+    .catch((err) => {
+        console.error("Error connecting to MongoDB Atlas:", err);
+        process.exit(1);
+    });
 
 const userSchema = new mongoose.Schema({
     username: String,
@@ -77,7 +92,9 @@ passport.deserializeUser(async function(id, done) {
 passport.use(new GoogleStrategy({
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
-    callbackURL: "http://localhost:3000/auth/google/homepage",
+    callbackURL: process.env.NODE_ENV === 'production' 
+        ? `${process.env.VERCEL_URL}/auth/google/homepage`
+        : "http://localhost:3000/auth/google/homepage",
     passReqToCallback: true
 },
 function(req, accessToken, refreshToken, profile, done) {
@@ -93,13 +110,21 @@ app.set('layout', 'layout');
 app.set('view engine', 'ejs');
 
 // Routes
+const tourists = [
+    { name: "Samantha W.", country: "PKR", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
+    { name: "John D.", country: "USA", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
+    { name: "Samantha W.", country: "PKR", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
+    { name: "John D.", country: "USA", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
+    // Add more tourist data as needed
+];
 app.get("/", function(req, res) {
     if (req.isAuthenticated()) {
         res.render("index", {
             user: req.user,
             isAuthenticated: true,
             title: "Dashboard",
-            path: "/"
+            path: "/",
+            tourists
         });
     } else {
         res.redirect("/login");
@@ -188,32 +213,45 @@ app.get('/logout', function(req, res) {
 });
 
 // Profile route
-app.get("/profile", ensureAuthenticated, function(req, res) {
+app.get("/home", ensureAuthenticated, function(req, res) {
     res.render("profile", {
         user: req.user,
-        title: "Profile",
-        path: "/profile"
+        title: "Home",
+        path: "/home"
     });
 });
 
 // Settings route
 app.get("/settings", ensureAuthenticated, function(req, res) {
+    const isAuthenticated = req.isAuthenticated();
     res.render("settings", {
+        isAuthenticated,
         user: req.user,
         title: "Settings",
-        path: "/settings"
+        path: req.path
     });
 });
 
 // Analytics route
-app.get("/analytics", ensureAuthenticated, function(req, res) {
-    res.render("analytics", {
+app.get("/tourist-data", ensureAuthenticated, function(req, res) {
+    res.render("tourist_data", {
+        isAuthenticated: req.isAuthenticated(),
         user: req.user,
-        title: "Analytics",
-        path: "/analytics"
+        title: "Tourist Data",
+        path: req.path
     });
 });
 
-app.listen(3000, function() {
-    console.log("Server started on port 3000");
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).render('error', {
+        title: 'Error',
+        message: 'Something went wrong!',
+        error: process.env.NODE_ENV === 'development' ? err : {}
+    });
+});
+
+app.listen(process.env.PORT || 3000, function() {
+    console.log("Server started on port " + (process.env.PORT || 3000));
 });

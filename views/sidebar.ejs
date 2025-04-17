@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Document</title>
+</head>
+<body>
     <style>
         :root {
             --primary-color: #4a6cf7;
@@ -16,76 +16,76 @@
             --warning-color: #ffc107;
             --danger-color: #dc3545;
         }
-
+    
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
+    
         body {
             background-color: #f5f7fb;
             color: #333;
         }
-
+    
         .sidebar {
             position: fixed;
             top: 0;
             left: 0;
             height: 100%;
             width: 250px;
-            background: white;
+            background: #1d2d4d;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             padding: 20px 0;
             transition: 0.3s;
             z-index: 100;
         }
-
+    
         .sidebar-header {
             padding: 0 20px 20px;
             border-bottom: 1px solid #eee;
         }
-
+    
         .sidebar-header h2 {
             color: white;
             font-weight: 600;
         }
-
+    
         .sidebar-menu {
             padding: 20px 0;
         }
-
+    
         .menu-item {
             padding: 12px 20px;
             display: flex;
             align-items: center;
-            color: var(--secondary-color);
+            color: white;
             text-decoration: none;
             transition: 0.3s;
         }
-
+    
         .menu-item:hover, .menu-item.active {
             background-color: rgba(74, 108, 247, 0.1);
             color: var(--primary-color);
             border-left: 4px solid var(--primary-color);
         }
-
+    
         .menu-item i {
             margin-right: 10px;
             font-size: 18px;
         }
-
+    
         .main-content {
             margin-left: 250px;
             padding: 20px;
             transition: 0.3s;
         }
-
+    
         .main-content.no-sidebar {
             margin-left: 0;
         }
-
+    
         .header {
             display: flex;
             justify-content: space-between;
@@ -94,13 +94,13 @@
             padding-bottom: 15px;
             border-bottom: 1px solid #eee;
         }
-
+    
         .header h1 {
             font-size: 24px;
             font-weight: 600;
             color: var(--dark-color);
         }
-
+    
         .search-bar {
             display: flex;
             align-items: center;
@@ -109,67 +109,63 @@
             padding: 8px 15px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
-
+    
         .search-bar input {
             border: none;
             outline: none;
             padding: 5px;
             width: 200px;
         }
-
+    
         .search-bar i {
             color: var(--secondary-color);
         }
-
+    
         @media (max-width: 992px) {
             .sidebar {
                 width: 70px;
                 overflow: hidden;
             }
-
+    
             .sidebar-header h2, .menu-item span {
                 display: none;
             }
-
+    
             .menu-item {
                 justify-content: center;
                 padding: 15px 0;
             }
-
+    
             .menu-item i {
                 margin-right: 0;
                 font-size: 20px;
             }
-
+    
             .main-content {
                 margin-left: 70px;
             }
-
+    
             .main-content.no-sidebar {
                 margin-left: 0;
             }
         }
-
+    
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 15px;
             }
-
+    
             .search-bar {
                 width: 100%;
             }
-
+    
             .search-bar input {
                 width: 100%;
             }
         }
     </style>
-</head>
-<body>
-    <% const isAuth = typeof isAuthenticated !== 'undefined' ? isAuthenticated : false; %>
-    <% if (isAuth) { %>
     <div class="sidebar">
         <div class="sidebar-header">
             <h2>Tourist Police GB</h2>
@@ -201,19 +197,7 @@
             </a>
         </div>
     </div>
-    <% } %>
-
-    <div class="main-content <%= !isAuth ? 'no-sidebar' : '' %>">
-        <div class="header">
-            <h1><%= typeof title !== 'undefined' ? title : '' %></h1>
-            <% if (isAuth) { %>
-            <div class="search-bar">
-                <i class="fas fa-search"></i>
-                <input type="text" placeholder="Search...">
-            </div>
-            <% } %>
-        </div>
-        <%- body %>
-    </div>
+    
+    
 </body>
 </html>
