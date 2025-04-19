@@ -1,0 +1,204 @@
+body{
+    background-color: #b8bdc1;
+}
+.section-1{
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+.data-main{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+.order-info{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+    
+
+}
+.order-date{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.order-time{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.vehicle-number{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.vehicle-goods{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 30%;
+}
+.personal-info-main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+    margin-bottom: 20px;
+    
+
+}
+.profile-image{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.driving-license{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.personal-image{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.type-goods{
+width: 30%;
+}
+.vehicle-info{
+display: flex
+;
+align-items: center;
+justify-content: space-between;
+flex-wrap: wrap;
+}
+.passenger-info-main{
+display: flex;
+flex-direction: column;
+gap: 20px;
+padding-bottom: 20px;
+}
+
+
+
+.order-info input, .personal-info input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f5f5f5;
+}
+.passenger-info{
+    display: flex
+;
+align-items: center;
+flex-wrap: wrap;
+gap: 20px;
+}
+
+.image-upload {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.image-upload img {
+    width: 50px;
+    height: 50px;
+    background-color: #f5f5f5;
+    border-radius: 5px;
+    margin-bottom: 5px;
+}
+
+.image-upload button {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.3s;
+}
+.vehicle-passengers{
+    width: 30%;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    gap: 10px;
+}
+
+.image-upload button:hover {
+    background-color: #c82333;
+}
+
+.save-data {
+    background-color: #B06C5D;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.3s;
+}
+
+.save-data:hover {
+    background-color: #c82333;
+}
+.checkbox{
+    width: 25px !important;
+    height: 25px !important;
+}
+
+.image-upload img{
+    width: 80px;
+    height: 80px;
+}
+.image-upload{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+
+/* UPLOAD IMAGE */
+.upload-container {
+
+cursor: pointer;
+
+}
+
+
+
+.upload-icon {
+width: 35px;
+height: 35px;
+fill: none;
+stroke: #0066CC;
+stroke-width: 2;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+
+.upload-icon .cloud {
+stroke: #E6F2FF;
+stroke-width: 1;
+}
+
+.upload-text {
+margin-top: 10px;
+color: #0066CC;
+font-weight: 500;
+}
+.section-2{
+background-color: white;
+padding: 20px;
+border-radius: 10px;
+}
+
+/* UPLOAD IMAGE */

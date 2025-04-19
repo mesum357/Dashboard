@@ -4,95 +4,467 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="/js/profile.js" defer></script> <!-- Assuming you have a styles.css file -->
     <style>
-        .profile-container {
+        /* Add styles directly here if not using external CSS */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .edit-profile-form {
             max-width: 800px;
             margin: 0 auto;
         }
 
-        .profile-card {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        .form-group {
+            margin-bottom: 20px;
         }
 
-        .profile-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .profile-avatar {
-            width: 100px;
-            height: 100px;
-            margin: 0 auto 20px;
-            background-color: rgba(74, 108, 247, 0.1);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .profile-avatar i {
-            font-size: 50px;
-            color: var(--primary-color);
-        }
-
-        .profile-header h2 {
-            color: var(--dark-color);
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        .profile-info {
-            display: grid;
-            gap: 20px;
-        }
-
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        .info-label {
-            color: var(--secondary-color);
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #6b7280;
             font-weight: 500;
         }
 
-        .info-value {
-            color: var(--dark-color);
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .save-button {
+            background-color: #3b82f6;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+
+        .save-button:hover {
+            background-color: #2563eb;
+        }
+
+        .profile-container {
+            max-width: 1000px; /* Adjusted width */
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fd;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+            position: relative; /* Added for button positioning */
+        }
+
+        .profile-header .image-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin-right: 20px;
+        }
+
+        .profile-header .image-container img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .profile-header .image-container .upload-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            cursor: pointer;
+        }
+
+        .profile-header .image-container.uploading .upload-overlay {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.7);
+            cursor: wait;
+        }
+
+        .profile-header .image-container:hover .upload-overlay {
+            opacity: 1;
+        }
+
+        .profile-header .image-container .upload-icon {
+            color: white;
+            font-size: 24px;
+        }
+
+        .profile-header .profile-info {
+            flex: 1;
+            text-align: center; /* Centered text */
+        }
+
+        .profile-header .profile-info h2 {
+            margin: 0;
+            font-size: 1.8rem; /* Adjusted font size */
             font-weight: 600;
+        }
+
+        .profile-header .profile-info p {
+            margin: 5px 0;
+            color: #6b7280;
+        }
+
+        .profile-header .profile-actions {
+            position: absolute; /* Positioned absolutely */
+            top: 20px;
+            right: 20px;
+        }
+
+        .profile-header .profile-actions button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            background-color: #f3f4f6;
+            color: #6b7280;
+        }
+
+        .profile-header .profile-actions button:hover {
+            background-color: #e5e7eb;
+        }
+
+        .profile-tabs {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .profile-tabs button {
+            padding: 10px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6b7280;
+            border-bottom: 2px solid transparent;
+        }
+
+        .profile-tabs button.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+
+        .profile-content {
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+            margin-top: 20px;
+        }
+
+        .profile-content .profile-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .profile-content .profile-details .detail {
+            flex: 1;
+            min-width: 200px;
+            background-color: #f8f9fd;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
+            text-align: center; /* Centered text */
+        }
+
+        .profile-content .profile-details .detail p {
+            margin: 0;
+            color: #6b7280;
+        }
+
+        .profile-content .profile-details .detail strong {
+            display: block;
+            margin-top: 5px;
+            font-weight: 600;
+        }
+
+        /* Popup styles */
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            width: 50%;
+            max-width: 500px;
+        }
+
+        .popup.active {
+            display: block;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .popup-header h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .popup-header .close-btn {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #6b7280;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .save-button {
+            background-color: #3b82f6;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+
+        .save-button:hover {
+            background-color: #2563eb;
+        }
+
+        /* Blur effect */
+        .blur-background {
+            filter: blur(5px);
+        }
+        .form-content{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
         }
     </style>
 </head>
 <body>
-    <div class="profile-container">
-        <div class="profile-card">
-            <div class="profile-header">
-                <div class="profile-avatar">
-                    <i class="fas fa-user-circle"></i>
+<%- include('sidebar') -%>
+
+<div class="profile-container">
+    <div class="profile-header">
+        <div class="image-container">
+            <img src="<%= user.profileImage || '/assets/images/default-profile.png' %>" alt="Profile Picture">
+            <form id="profile-image-form" enctype="multipart/form-data">
+                <label for="profile-image-upload" class="upload-overlay">
+                    <i class="fas fa-camera upload-icon"></i>
+                </label>
+                <input type="file" id="profile-image-upload" name="profileImage" accept="image/*" style="display: none;">
+                <button type="submit" class="upload-button" style="display: none;">Upload Photo</button>
+            </form>
+        </div>
+        <div class="profile-info">
+            <h2><%= data.fullname %></h2>
+            <p>Admin</p>
+        </div>
+        <div class="profile-actions">
+            <button id="create-subadmin-btn" class="create-subadmin-btn" style="background-color: #3b82f6; color: white;">
+                <i class="fas fa-user-plus"></i> Create Sub Admin
+            </button>
+        </div>
+    </div>
+
+    <div class="profile-tabs">
+        <button class="tab-btn active" data-tab="about">About</button>
+        <button class="tab-btn" data-tab="edit">Edit Profile</button>
+    </div>
+
+    <div class="profile-content">
+        <div id="about-tab" class="tab-content active">
+            <div class="profile-details">
+                <div class="detail">
+                    <p>Full Name:</p>
+                    <strong><%= data.fullname %></strong>
                 </div>
-                <h2><%= user.username %></h2>
-            </div>
-            <div class="profile-info">
-                <div class="info-item">
-                    <span class="info-label">Email:</span>
-                    <span class="info-value"><%= user.email || 'Not provided' %></span>
+                <div class="detail">
+                    <p>Permanent address:</p>
+                    <strong><%= data.permanentAddress %></strong>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">Account Type:</span>
-                    <span class="info-value"><%= user.googleId ? 'Google' : 'Local' %></span>
+                <div class="detail">
+                    <p>Position:</p>
+                    <strong><%= data.position  %></strong>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">Member Since:</span>
-                    <span class="info-value"><%= new Date(user.createdAt).toLocaleDateString() %></span>
+                <div class="detail">
+                    <p>CNIC:</p>
+                    <strong><%= data.cnic  %></strong>
+                </div>
+                <div class="detail">
+                    <p>Mobile:</p>
+                    <strong><%= data.phoneNumber  %></strong>
+                </div>
+                <div class="detail">
+                    <p>Email:</p>
+                    <strong><%= data.email %></strong>
                 </div>
             </div>
         </div>
+        <div id="edit-tab" class="tab-content">
+            <form id="edit-profile-form" class="edit-profile-form" action="/admin-form" method="post">
+                <div class="form-group">
+                    <label for="fullName">Full Name:</label>
+                    <input type="text" id="fullName" name="fullname" required>
+                </div>
+                <div class="form-group">
+                    <label for="permanentAddress">Permanent Address:</label>
+                    <input type="text" id="permanentAddress" name="permanentAddress" required>
+                </div>
+                <div class="form-group">
+                    <label for="position">Position:</label>
+                    <input type="text" id="position" name="position" value="Admin" readonly required>
+                </div>
+                <div class="form-group">
+                    <label for="cnic">CNIC:</label>
+                    <input type="text" id="cnic" name="cnic" required>
+                </div>
+                <div class="form-group">
+                    <label for="mobile">Mobile:</label>
+                    <input type="tel" id="mobile" name="mobile" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <button type="submit" class="save-button">Save Changes</button>
+            </form>
+        </div>
     </div>
+</div>
+
+<!-- Popup for creating sub admin -->
+<div id="subadmin-popup" class="popup">
+    <div class="popup-header">
+        <h3>Create Sub Admin</h3>
+        <span class="close-btn">&times;</span>
+    </div>
+    <form id="subadmin-form" action="/subadmin-form" method="post">
+        <div class="form-content">
+        <div class="form-group">
+            <label for="firstName">First Name:</label>
+            <input type="text" id="firstName" name="firstName" required>
+        </div>
+        <div class="form-group">
+            <label for="lastName">Last Name:</label>
+            <input type="text" id="lastName" name="lastName" required>
+        </div>
+        <div class="form-group">
+            <label for="phoneNumber">Phone Number:</label>
+            <input type="tel" id="phoneNumber" name="phoneNumber" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div class="form-group">
+            <label for="cnic">CNIC Number:</label>
+            <input type="text" id="cnic" name="cnic" required>
+        </div>
+        <div class="form-group">
+            <label for="position">Position:</label>
+            <input type="text" id="position" name="position" required>
+        </div>
+        <div class="form-group">
+            <label for="currentAddress">User Name:</label>
+            <input type="text" id="currentAddress" name="username" required>
+        </div>
+       
+        <button type="submit" class="save-button">Create Sub Admin</button>
+    </div>
+    </form>
+</div>
+
+<script>
+    document.getElementById('create-subadmin-btn').addEventListener('click', function() {
+        document.getElementById('subadmin-popup').classList.add('active');
+        document.querySelector('.profile-container').classList.add('blur-background');
+    });
+
+    document.querySelector('.close-btn').addEventListener('click', function() {
+        document.getElementById('subadmin-popup').classList.remove('active');
+        document.querySelector('.profile-container').classList.remove('blur-background');
+    });
+</script>
+
 </body>
-</html> 
+</html>

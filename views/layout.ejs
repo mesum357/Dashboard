@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
+    <title><%= typeof title !== 'undefined' ? title : 'App' %></title> <!-- Use title variable -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -29,57 +29,19 @@
             color: #333;
         }
 
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 250px;
-            background: white;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            padding: 20px 0;
-            transition: 0.3s;
-            z-index: 100;
-        }
-
-        .sidebar-header {
-            padding: 0 20px 20px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .sidebar-header h2 {
-            color: white;
-            font-weight: 600;
-        }
-
-        .sidebar-menu {
-            padding: 20px 0;
-        }
-
-        .menu-item {
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            color: var(--secondary-color);
-            text-decoration: none;
-            transition: 0.3s;
-        }
-
-        .menu-item:hover, .menu-item.active {
-            background-color: rgba(74, 108, 247, 0.1);
-            color: var(--primary-color);
-            border-left: 4px solid var(--primary-color);
-        }
-
-        .menu-item i {
-            margin-right: 10px;
-            font-size: 18px;
-        }
+        /* Remove sidebar specific styles from here */
+        /* .sidebar { ... } */
+        /* .sidebar-header { ... } */
+        /* .sidebar-menu { ... } */
+        /* .menu-item { ... } */
+        /* .menu-item:hover, .menu-item.active { ... } */
+        /* .menu-item i { ... } */
+        /* Keep styles for .main-content, .header, .search-bar etc. */
 
         .main-content {
-            margin-left: 250px;
+            margin-left: 250px; /* Adjust if sidebar width changes */
             padding: 20px;
-            transition: 0.3s;
+            transition: margin-left 0.3s; /* Match sidebar transition */
         }
 
         .main-content.no-sidebar {
@@ -121,28 +83,17 @@
             color: var(--secondary-color);
         }
 
+        /* Media queries might need adjustments based on sidebar.ejs styles */
         @media (max-width: 992px) {
-            .sidebar {
-                width: 70px;
-                overflow: hidden;
-            }
-
-            .sidebar-header h2, .menu-item span {
-                display: none;
-            }
-
-            .menu-item {
-                justify-content: center;
-                padding: 15px 0;
-            }
-
-            .menu-item i {
-                margin-right: 0;
-                font-size: 20px;
-            }
+             /* Remove sidebar specific media query styles */
+            /* .sidebar { ... } */
+            /* .sidebar-header h2, .menu-item span { ... } */
+            /* .menu-item { ... } */
+            /* .menu-item i { ... } */
 
             .main-content {
-                margin-left: 70px;
+                 /* Adjust margin based on collapsed sidebar width from sidebar.ejs */
+                margin-left: 70px; /* Example: Assuming collapsed width is 70px */
             }
 
             .main-content.no-sidebar {
@@ -164,56 +115,37 @@
             .search-bar input {
                 width: 100%;
             }
+             /* Main content margin might need adjustment if sidebar collapses differently */
+             .main-content {
+                margin-left: 70px; /* Adjust if needed for mobile */
+             }
         }
     </style>
 </head>
 <body>
     <% const isAuth = typeof isAuthenticated !== 'undefined' ? isAuthenticated : false; %>
-    <% if (isAuth) { %>
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h2>Tourist Police GB</h2>
-        </div>
-        <div class="sidebar-menu">
-            <a href="/" class="menu-item <%= path === '/' ? 'active' : '' %>">
-                <i class="fas fa-home"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="/home" class="menu-item <%= path === '/home' ? 'active' : '' %>">
-                <i class="fas fa-user"></i>
-                <span>Home</span>
-            </a>
-            <a href="/tourist-data" class="menu-item <%= path === '/tourist-data' ? 'active' : '' %>">
-                <i class="fas fa-cog"></i>
-                <span>Tourists Data</span>
-            </a>
-            <a href="/admins" class="menu-item <%= path === '/admins' ? 'active' : '' %>">
-                <i class="fas fa-chart-line"></i>
-                <span>Admins</span>
-            </a>
-            <a href="/profile" class="menu-item <%= path === '/profile' ? 'active' : '' %>">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Profile</span>
-            </a>
-            <a href="/settings" class="menu-item <%= path === '/settings' ? 'active' : '' %>">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Setting</span>
-            </a>
-        </div>
-    </div>
+    <% const currentPath = typeof path !== 'undefined' ? path : ''; %>
+
+    <% if (isAuth && currentPath !== '/login') { %>
+        <!-- Include the sidebar partial -->
+        <%- include('./sidebar.ejs', { path: currentPath }) %>
     <% } %>
 
-    <div class="main-content <%= !isAuth ? 'no-sidebar' : '' %>">
+    <div class="main-content <%= !isAuth || currentPath === '/login' ? 'no-sidebar' : '' %>">
         <div class="header">
             <h1><%= typeof title !== 'undefined' ? title : '' %></h1>
-            <% if (isAuth) { %>
+            <% if (isAuth && currentPath !== '/login') { %> <!-- Also hide search on login -->
             <div class="search-bar">
                 <i class="fas fa-search"></i>
                 <input type="text" placeholder="Search...">
             </div>
             <% } %>
         </div>
-        <%- body %>
+        <%- body %> <!-- This renders the specific page content -->
     </div>
+
+    <!-- Move scripts needed globally here, or keep page-specific scripts in their EJS files -->
+    <!-- Example: <script src="/js/main.js"></script> -->
+
 </body>
 </html>

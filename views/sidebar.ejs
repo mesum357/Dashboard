@@ -6,28 +6,18 @@
     <title>Document</title>
 </head>
 <body>
+    <!-- Styles specific to the sidebar -->
     <style>
+        /* Keep :root variables if they are used ONLY by sidebar elements,
+           otherwise, they should be defined in layout.ejs */
         :root {
             --primary-color: #4a6cf7;
-            --secondary-color: #6c757d;
-            --light-color: #f8f9fa;
-            --dark-color: #343a40;
-            --success-color: #28a745;
-            --warning-color: #ffc107;
-            --danger-color: #dc3545;
+            /* --secondary-color: #6c757d; */ /* Likely used elsewhere, define in layout */
+            /* --light-color: #f8f9fa; */   /* Likely used elsewhere, define in layout */
+            /* --dark-color: #343a40; */    /* Likely used elsewhere, define in layout */
         }
     
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-    
-        body {
-            background-color: #f5f7fb;
-            color: #333;
-        }
+        /* Remove global styles like *, body - they belong in layout.ejs */
     
         .sidebar {
             position: fixed;
@@ -35,100 +25,137 @@
             left: 0;
             height: 100%;
             width: 250px;
-            background: #1d2d4d;
+            background: #1d2d4d; /* Dark blue background */
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            padding: 20px 0;
-            transition: 0.3s;
+            padding-top: 20px; /* Adjusted padding */
+            transition: width 0.3s ease; /* Smooth transition for width */
             z-index: 100;
+            overflow-y: auto; /* Allow scrolling if content exceeds height */
+            overflow-x: hidden; /* Hide horizontal overflow */
         }
     
         .sidebar-header {
             padding: 0 20px 20px;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Lighter border for dark bg */
+            margin-bottom: 20px; /* Space below header */
         }
     
         .sidebar-header h2 {
             color: white;
             font-weight: 600;
+            font-size: 1.5rem; /* Slightly larger title */
+            text-align: center; /* Center title */
         }
     
         .sidebar-menu {
-            padding: 20px 0;
+            padding: 0; /* Remove default padding */
         }
     
         .menu-item {
             padding: 12px 20px;
             display: flex;
             align-items: center;
-            color: white;
+            color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
             text-decoration: none;
-            transition: 0.3s;
+            transition: background-color 0.3s, color 0.3s, border-left 0.3s;
+            border-left: 4px solid transparent; /* Placeholder for active state */
+            white-space: nowrap; /* Prevent text wrapping */
         }
     
-        .menu-item:hover, .menu-item.active {
-            background-color: rgba(74, 108, 247, 0.1);
-            color: var(--primary-color);
-            border-left: 4px solid var(--primary-color);
+        .menu-item span {
+            margin-left: 10px;
+            transition: opacity 0.3s; /* Smooth fade for text */
         }
     
         .menu-item i {
-            margin-right: 10px;
             font-size: 18px;
+            width: 20px; /* Fixed width for icon alignment */
+            text-align: center;
+            flex-shrink: 0; /* Prevent icon from shrinking */
         }
     
-        .main-content {
-            margin-left: 250px;
-            padding: 20px;
-            transition: 0.3s;
+        .menu-item:hover {
+            background-color: rgba(74, 108, 247, 0.2); /* Slightly darker hover */
+            color: white; /* Brighter text on hover */
+            border-left: 4px solid var(--primary-color);
         }
     
-        .main-content.no-sidebar {
-            margin-left: 0;
+        .menu-item.active {
+            background-color: rgba(74, 108, 247, 0.3); /* More prominent active bg */
+            color: white; /* Ensure active text is white */
+            font-weight: 500;
+            border-left: 4px solid var(--primary-color);
         }
     
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
+        /* Remove styles for .main-content, .header, .search-bar - they belong in layout.ejs */
+    
+        /* Dropdown specific styles */
+        .menu-item-group {
+            /* Container for dropdown toggle and submenu */
         }
     
-        .header h1 {
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--dark-color);
+        .menu-item.has-submenu {
+            position: relative;
         }
     
-        .search-bar {
-            display: flex;
-            align-items: center;
-            background: white;
-            border-radius: 8px;
-            padding: 8px 15px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        .submenu-arrow {
+            margin-left: auto;
+            font-size: 12px;
+            transition: transform 0.3s ease;
         }
     
-        .search-bar input {
-            border: none;
-            outline: none;
-            padding: 5px;
-            width: 200px;
+        .submenu {
+            display: none;
+            padding-left: 0; /* Remove padding, handled by submenu-item */
+            background-color: rgba(0, 0, 0, 0.2); /* Darker background for submenu */
+            overflow: hidden; /* Prevent content spill during animation (if added) */
         }
     
-        .search-bar i {
-            color: var(--secondary-color);
+        .submenu-item {
+            padding-left: 44px; /* Indent: 20px (parent) + 20px (icon width) + 4px (border) */
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.7); /* Slightly dimmer submenu text */
+            border-left: 4px solid transparent; /* Reset border */
         }
     
+         .submenu-item:hover {
+            background-color: rgba(74, 108, 247, 0.2);
+            color: white;
+            border-left: 4px solid transparent; /* No border highlight on hover for subitems */
+        }
+    
+        .submenu-item.active {
+            background-color: transparent; /* No background for active subitem */
+            color: var(--primary-color); /* Highlight active subitem text */
+            font-weight: 500;
+            border-left: 4px solid transparent; /* No border for active subitem */
+        }
+    
+        /* Style for the parent dropdown item when its submenu is open or a child is active */
+        .menu-item.has-submenu.active {
+            background-color: rgba(74, 108, 247, 0.1); /* Subtle background */
+            color: white; /* Keep text white */
+            border-left: 4px solid var(--primary-color);
+        }
+    
+        /* Media Query for collapsed sidebar */
         @media (max-width: 992px) {
             .sidebar {
                 width: 70px;
-                overflow: hidden;
             }
     
-            .sidebar-header h2, .menu-item span {
-                display: none;
+            .sidebar-header h2 {
+                display: none; /* Hide text header */
+            }
+             .sidebar-header {
+                 border-bottom: none; /* Remove border when collapsed */
+                 padding: 0 10px 10px; /* Adjust padding */
+                 margin-bottom: 10px;
+             }
+    
+            .menu-item span, .submenu-arrow {
+                display: none; /* Hide text and arrow */
+                opacity: 0; /* Fade out text */
             }
     
             .menu-item {
@@ -141,34 +168,23 @@
                 font-size: 20px;
             }
     
-            .main-content {
-                margin-left: 70px;
+            .submenu {
+                display: none !important; /* Force hide submenu when sidebar is collapsed */
             }
-    
-            .main-content.no-sidebar {
-                margin-left: 0;
-            }
+             /* Remove hover/active border when collapsed */
+             .menu-item:hover, .menu-item.active, .menu-item.has-submenu.active {
+                 border-left: 4px solid transparent;
+             }
         }
     
-        @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
+        /* Remove media query for .header / .search-bar - belongs in layout.ejs */
     
-            .search-bar {
-                width: 100%;
-            }
-    
-            .search-bar input {
-                width: 100%;
-            }
-        }
     </style>
+    
+    <!-- Sidebar HTML Structure -->
     <div class="sidebar">
         <div class="sidebar-header">
-            <h2>Tourist Police GB</h2>
+            <h2>TP GB</h2> <!-- Shortened Title for potential display later -->
         </div>
         <div class="sidebar-menu">
             <a href="/" class="menu-item <%= path === '/' ? 'active' : '' %>">
@@ -179,25 +195,124 @@
                 <i class="fas fa-user"></i>
                 <span>Home</span>
             </a>
-            <a href="/tourist-data" class="menu-item <%= path === '/tourist-data' ? 'active' : '' %>">
-                <i class="fas fa-cog"></i>
-                <span>Tourists Data</span>
-            </a>
+    
+            <!-- Start Dropdown Menu -->
+            <div class="menu-item-group">
+                <!-- Updated active check for parent -->
+                <a href="#" class="menu-item has-submenu <%= (path === '/tourist-data' || path === '/latest-data' || path === '/previous-data') ? 'active' : '' %>" onclick="toggleSubmenu(event)">
+                    <i class="fas fa-database"></i>
+                    <span>Data</span>
+                    <i class="fas fa-chevron-down submenu-arrow"></i>
+                </a>
+                <div class="submenu">
+                     <!-- Added Tourist Data back into the dropdown -->
+                     <a href="/tourist-data" class="menu-item submenu-item <%= path === '/tourist-data' ? 'active' : '' %>">
+                        <span>Tourists Data</span>
+                    </a>
+                    <a href="/latest-data" class="menu-item submenu-item <%= path === '/latest-data' ? 'active' : '' %>">
+                        <span>Latest Data</span>
+                    </a>
+                    <a href="/previous-data" class="menu-item submenu-item <%= path === '/previous-data' ? 'active' : '' %>">
+                        <span>Previous Data</span>
+                    </a>
+                </div>
+            </div>
+            <!-- End Dropdown Menu -->
+    
             <a href="/admins" class="menu-item <%= path === '/admins' ? 'active' : '' %>">
-                <i class="fas fa-chart-line"></i>
+                <i class="fas fa-shield-alt"></i> <!-- Changed icon for Admins -->
                 <span>Admins</span>
             </a>
             <a href="/profile" class="menu-item <%= path === '/profile' ? 'active' : '' %>">
-                <i class="fas fa-sign-out-alt"></i>
+                <i class="fas fa-user-circle"></i>
                 <span>Profile</span>
             </a>
             <a href="/settings" class="menu-item <%= path === '/settings' ? 'active' : '' %>">
-                <i class="fas fa-sign-out-alt"></i>
+                <i class="fas fa-cog"></i>
                 <span>Setting</span>
+            </a>
+             <!-- Logout Link -->
+             <a href="/logout" class="menu-item">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
             </a>
         </div>
     </div>
     
+    <!-- Keep Font Awesome script if layout.ejs doesn't already include it -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script> -->
     
+    <!-- Keep JavaScript specific to the sidebar -->
+    <script>
+        function toggleSubmenu(event) {
+            // Prevent toggle if sidebar is collapsed (optional, based on UX preference)
+            if (window.innerWidth <= 992) {
+                 // Maybe navigate to a default sub-page or do nothing
+                 // Example: Navigate to the first item if clicked when collapsed
+                 // const firstSubmenuLink = event.currentTarget.closest('.menu-item-group').querySelector('.submenu a');
+                 // if (firstSubmenuLink) window.location.href = firstSubmenuLink.href;
+                 return; // Or simply do nothing
+            }
+    
+            event.preventDefault();
+            const parentGroup = event.currentTarget.closest('.menu-item-group');
+            const submenu = parentGroup.querySelector('.submenu');
+            const arrow = event.currentTarget.querySelector('.submenu-arrow');
+    
+            // Close other open submenus (optional)
+            // document.querySelectorAll('.submenu').forEach(otherSubmenu => {
+            //     if (otherSubmenu !== submenu && otherSubmenu.style.display === 'block') {
+            //         otherSubmenu.style.display = 'none';
+            //         const otherArrow = otherSubmenu.closest('.menu-item-group').querySelector('.submenu-arrow');
+            //         if (otherArrow) {
+            //              otherArrow.classList.remove('fa-chevron-up');
+            //              otherArrow.classList.add('fa-chevron-down');
+            //         }
+            //     }
+            // });
+    
+    
+            if (submenu.style.display === 'block') {
+                submenu.style.display = 'none';
+                arrow.classList.remove('fa-chevron-up');
+                arrow.classList.add('fa-chevron-down');
+                event.currentTarget.classList.remove('active'); // Optionally remove active state from parent when closing
+            } else {
+                submenu.style.display = 'block';
+                arrow.classList.remove('fa-chevron-down');
+                arrow.classList.add('fa-chevron-up');
+                 // Check if any child is active before adding active class to parent
+                 const isChildActive = submenu.querySelector('.submenu-item.active');
+                 if (!isChildActive) {
+                     event.currentTarget.classList.add('active'); // Optionally add active state to parent when opening
+                 }
+            }
+        }
+    
+        // Keep submenu open if a child item is active on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const activeSubmenuItem = document.querySelector('.submenu-item.active');
+            if (activeSubmenuItem && window.innerWidth > 992) { // Only open if not collapsed
+                const parentGroup = activeSubmenuItem.closest('.menu-item-group');
+                const submenu = parentGroup.querySelector('.submenu');
+                const arrow = parentGroup.querySelector('.submenu-arrow');
+                const parentMenuItem = parentGroup.querySelector('.has-submenu'); // Get the parent menu item
+    
+                submenu.style.display = 'block';
+                arrow.classList.remove('fa-chevron-down');
+                arrow.classList.add('fa-chevron-up');
+                parentMenuItem.classList.add('active'); // Ensure parent is also marked active
+            }
+    
+             // Add active class to parent dropdown if a child is active (even if collapsed)
+             const activeSubmenuParent = document.querySelector('.submenu-item.active')?.closest('.menu-item-group')?.querySelector('.has-submenu');
+             if (activeSubmenuParent) {
+                 activeSubmenuParent.classList.add('active');
+             }
+        });
+    </script>
+
 </body>
 </html>
+
+    

@@ -132,15 +132,7 @@
 <body>
   <div class="container-fluid">
     <div class="row">
-      <!-- <div class="col-md-2 sidebar d-flex flex-column p-3">
-        <h4 class="text-white mb-4">Tourist Police GB</h4>
-        <a href="#" class="nav-link">Dashboard</a>
-        <a href="#" class="nav-link">Home</a>
-        <a href="#" class="nav-link">Tourists Data</a>
-        <a href="#" class="nav-link">Admins</a>
-        <a href="#" class="nav-link">Profile</a>
-        <a href="#" class="nav-link">Settings</a>
-      </div> -->
+  
       <div class="col-md-12 p-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
        
@@ -184,16 +176,13 @@
               <div class="d-flex justify-content-around mt-3">
                 <div class="text-center">
                   <p class="mb-0" style="color:#3B82F6">Male</p>
-                  <strong style="color:#3B82F6">70%</strong>
+                  <strong style="color:#3B82F6"><%= maleCount %></strong>
                 </div>
                 <div class="text-center">
                   <p class="mb-0" style="color:#ec4899">Female</p>
-                  <strong style="color:#ec4899">20%</strong>
+                  <strong style="color:#ec4899"><%= femaleCount %></strong>
                 </div>
-                <div class="text-center">
-                  <p class="mb-0" style="color:#22c55e">Others</p>
-                  <strong style="color:#22c55e">10%</strong>
-                </div>
+               
               </div>
             </div>
           </div>
@@ -265,88 +254,103 @@
     new Chart(genderCtx, {
       type: 'doughnut',
       data: {
-        labels: ['Male', 'Female', 'Others'],
+        labels: ['Male', 'Female'],
         datasets: [
           {
-            label: 'Male',
-            data: [70, 30],
-            backgroundColor: ['#3B82F6', '#f1f5f9'],
+            data: [<%= maleCount %>, <%= femaleCount %>],
+            backgroundColor: ['#3B82F6', '#ec4899'],
             radius: '50%',
             cutout: '40%',
-          },
-          {
-            label: 'Female',
-            data: [20, 80],
-            backgroundColor: ['#ec4899', '#f1f5f9'],
-            radius: '48%',
-            cutout: '40%',
-          },
-          {
-            label: 'Others',
-            data: [50, 50],
-            backgroundColor: ['#22c55e', '#f1f5f9'],
-            radius: '45%',
-            cutout: '40%',
-          },
+          }
         ],
       },
       options: {
         responsive: true,
         plugins: {
           legend: {
-            display: false,
+            display: true,
           },
         },
+        
       },
     });
+    const current_date = new Date().getDate();
+const current_month = new Date().getMonth() + 1;
 
-    new Chart(touristCtx, {
-      type: 'line',
-      data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-        datasets: [
-          {
-            label: 'Last Week',
-            data: [20, 25, 30, 50, 40, 30, 20, 25, 30, 10],
-            borderColor: '#ef4444',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            tension: 0.4,
-            fill: true,
-            pointRadius: 0
-          },
-          {
-            label: 'This Week',
-            data: [10, 30, 20, 40, 60, 60, 70, 80, 40, 20],
-            borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            tension: 0.4,
-            fill: true,
-            pointRadius: 0
-          }
-        ]
+// Generate realistic fluctuating data
+function generateData() {
+  let data = [];
+  let currentValue = <%= userRegistrations %>;
+
+    data.push(currentValue); // Ensure minimum of 5
+  
+  return data;
+}
+
+new Chart(touristCtx, {
+  type: 'line',
+  data: {
+    labels: Array.from({ length: 30 }, (_, i) => {
+      const date = new Date();
+      date.setDate(current_date + i);
+      return `${date.getDate()}/${date.getMonth() + 1}`;
+    }),
+    datasets: [{
+      label: 'User Registrations',
+      data: generateData(),
+      borderColor: '#3b82f6',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      tension: 0.4,
+      fill: true,
+      pointRadius: 2,
+      borderWidth: 2,
+      pointHoverRadius: 5
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          boxWidth: 10
+        }
       },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            labels: {
-              usePointStyle: true,
-              boxWidth: 10
-            },
-            position: 'top'
-          },
+      tooltip: {
+        mode: 'index',
+        intersect: false
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false
         },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              stepSize: 20
-            }
+        ticks: {
+          autoSkip: true,
+          maxTicksLimit: 10
+        }
+      },
+      y: {
+        beginAtZero: false,
+        grid: {
+          color: 'rgba(200, 200, 200, 0.2)'
+        },
+        ticks: {
+          callback: function(value) {
+            return value + ' users';
           }
         }
       }
-    });
-
+    },
+    interaction: {
+      mode: 'nearest',
+      axis: 'x',
+      intersect: false
+    }
+  }
+});
     // Add event listeners to the dots for interactivity
     document.querySelectorAll('.dots').forEach(dots => {
       dots.addEventListener('click', function() {
@@ -355,5 +359,7 @@
       });
     });
   </script>
+
+
 </body>
 </html>

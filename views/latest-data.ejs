@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Data</title>
+    <link rel="stylesheet" href="/css/styles.css"> <!-- Assuming you have a styles.css file -->
+    <style>
+        /* Add styles directly here if not using external CSS */
+        .latest-data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .latest-data-table th,
+        .latest-data-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .latest-data-table thead th {
+            background-color: #f5f5f5;
+            border-bottom-width: 2px;
+            font-weight: 600;
+        }
+
+        .latest-data-table tbody tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .latest-data-table td {
+            background-color: #f8f9fd;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .action-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-buttons button {
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .btn-send {
+            background-color: #B06C5D;
+            color: white;
+        }
+
+        .btn-print {
+            background-color: transparent;
+            color: #B06C5D;
+            border: 1px solid #B06C5D;
+        }
+    </style>
+</head>
+<body>
+<%- include('sidebar') -%>
+
+<div class="container">
+    <h3>Latest Data</h3>
+    <table class="latest-data-table">
+        <thead>
+            <tr>
+                <th>SL No</th>
+                <th>CNIC</th>
+                <th>Driving License</th>
+                <th>Type of goods</th>
+                <th>No of Females</th>
+                <th>No of Males</th>
+                <th>Total Passengers</th>
+                <th>V Number</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% data.forEach((data) => { %>
+                <tr>
+                    <td><%= data.srNo %></td>
+                    <td><%= data.orderDate %></td>
+                    <td><%= data.time %></td>
+                    <td><%= data.passengers %></td>
+                    <td><%= data.males %></td>
+                    <td><%=  data.females %></td>
+                    <td><%= data.goods  %></td>
+                    <td><%= data.vehicleNumber  %></td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+
+    <div class="action-buttons">
+        <button class="btn-send">Send Details</button>
+        <button class="btn-print" onclick="window.print()">Print Now</button>
+    </div>
+</div>
+
+</body>
+</html>
