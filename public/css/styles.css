@@ -2,3 +2,47 @@ h1{
     color: blue;
     font-size: 49px;
 }
+
+.sidebar {
+    width: 200px;
+    background-color: #f8f9fa;
+    padding: 15px;
+    position: fixed;
+    height: 100%;
+}
+
+.sidebar ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    padding: 10px;
+    text-align: left;
+}
+
+.sidebar ul li a {
+    text-decoration: none;
+    color: #000;
+    display: block;
+}
+
+.administrations {
+    margin-left: 220px;
+    padding: 20px;
+}
+
+.administrations table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.administrations th, .administrations td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.administrations th {
+    background-color: #f2f2f2;
+}

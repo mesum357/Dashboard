@@ -96,7 +96,6 @@ const User = mongoose.model('User', userSchema);
 // Passport configuration
 passport.use(User.createStrategy());
 
-// Serialize and deserialize user
 passport.serializeUser(function(user, done) {
     done(null, user.id);
 });
@@ -150,7 +149,7 @@ const tourists = [
     { name: "John D.", country: "USA", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
 ];
 
-const UploadSchema = mongoose.Schema({
+const UploadSchema = new mongoose.Schema({
     srNo: {
         type: Number,
         default: 0
@@ -162,11 +161,10 @@ const UploadSchema = mongoose.Schema({
     females: Number,
     males: Number,
     goods: String,
-    profileImage: String, // Path to the profile image
-    drivingLicenseImage: String // Path to the driving license image
+    profileImage: String,
+    drivingLicenseImage: String
 });
 
-// Add pre-save middleware to auto-increment srNo
 UploadSchema.pre('save', async function(next) {
     if (this.isNew) {
         const count = await this.constructor.countDocuments();
@@ -177,7 +175,6 @@ UploadSchema.pre('save', async function(next) {
 
 const Upload = mongoose.model("upload", UploadSchema);
 
-// Add middleware to check authentication
 function ensureAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {
         return next();
@@ -185,21 +182,17 @@ function ensureAuthenticated(req, res, next) {
     res.redirect('/login');
 }
 
-// Protected routes
-// Profile image upload endpoint
 app.post('/upload-profile-image', ensureAuthenticated, upload.single('profileImage'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
-        // Find the admin record and update profile image
         const admin = await Admin.findOne({});
         if (!admin) {
             return res.status(404).json({ success: false, message: 'Admin profile not found' });
         }
 
-        // Update admin's profile image in database
         admin.profileImage = req.file.path;
         await admin.save();
 
@@ -215,19 +208,13 @@ app.post('/upload-profile-image', ensureAuthenticated, upload.single('profileIma
         });
     }
 });
+
 app.get("/", ensureAuthenticated, async function(req, res) {
     try {
         const uploads = await Upload.find();
         const maleCount = uploads.reduce((total, upload) => total + (upload.males || 0), 0);
         const femaleCount = uploads.reduce((total, upload) => total + (upload.females || 0), 0);
-
-        // Fetch user registration data
-        const userRegistrations = maleCount + femaleCount
-        console.log(userRegistrations)
-
-        console.log('Male Count:', maleCount);
-        console.log('Female Count:', femaleCount);
-        console.log('User Registrations:', userRegistrations);
+        const userRegistrations = maleCount + femaleCount;
 
         res.render('index', {
             user: req.user,
@@ -245,10 +232,12 @@ app.get("/", ensureAuthenticated, async function(req, res) {
     }
 });
 
-// Prevent authenticated users from accessing login and register pages
 app.get("/login", function(req, res) {
+    if (req.isAuthenticated()) {
+        return res.redirect("/");
+    }
     res.render("login", {
-        isAuthenticated: req.isAuthenticated(),
+        isAuthenticated: false,
         title: "Login",
         path: "/login"
     });
@@ -256,34 +245,28 @@ app.get("/login", function(req, res) {
 
 app.get("/register", function(req, res) {
     if (req.isAuthenticated()) {
-        res.redirect("/");
-    } else {
-        res.render("register", {
-            isAuthenticated: req.isAuthenticated(),
-            title: "Register",
-            path: "/register"
-        });
+        return res.redirect("/");
     }
+    res.render("register", {
+        isAuthenticated: false,
+        title: "Register",
+        path: "/register"
+    });
 });
 
-// POST Routes
 app.post("/register", function(req, res) {
-    const username = req.body.username;
-    const password = req.body.password;
-    User.register({ username: username }, password, function(err, user) {
+    User.register({ username: req.body.username }, req.body.password, function(err, user) {
         if (err) {
-            console.log(err);
-            res.redirect("/register");
-        } else {
-            req.login(user, function(err) {
-                if (err) {
-                    console.log(err);
-                    res.redirect("/register");
-                } else {
-                    res.redirect("/login");
-                }
-            });
+            console.error(err);
+            return res.redirect("/register");
         }
+        req.login(user, function(err) {
+            if (err) {
+                console.error(err);
+                return res.redirect("/register");
+            }
+            res.redirect("/login");
+        });
     });
 });
 
@@ -301,35 +284,29 @@ app.get('/auth/google/homepage',
         res.redirect('/');
     });
 
-// Logout route
-app.get('/logout', function(req, res) {
+app.get('/logout', function(req, res, next) {
     req.logout(function(err) {
         if (err) { return next(err); }
         res.redirect('/');
     });
 });
 
-
-
-// Settings route
 app.get("/settings", ensureAuthenticated, function(req, res) {
-    const isAuthenticated = req.isAuthenticated();
     res.render("settings", {
-        isAuthenticated,
+        isAuthenticated: true,
         user: req.user,
         title: "Settings",
         path: req.path
     });
 });
 
-// Analytics route
 app.get("/tourist-data", ensureAuthenticated, function(req, res) {
     Upload.find({})
-        .sort({ _id: -1 }) // Sort by most recent first
-        .limit(10) // Limit to 10 records
+        .sort({ _id: -1 })
+        .limit(10)
         .then((data) => {
             res.render("tourist_data", {
-                isAuthenticated: req.isAuthenticated(),
+                isAuthenticated: true,
                 user: req.user,
                 title: "Tourist Data",
                 path: req.path,
@@ -342,200 +319,148 @@ app.get("/tourist-data", ensureAuthenticated, function(req, res) {
         });
 });
 
-app.post('/upload', upload.fields([{ name: 'profileImage' }, { name: 'drivingLicenseImage' }]), function(req, res) {
-    const profileImage = req.files['profileImage'] ? req.files['profileImage'][0].path : null;
-    const drivingLicenseImage = req.files['drivingLicenseImage'] ? req.files['drivingLicenseImage'][0].path : null;
+app.post('/upload', upload.fields([
+    { name: 'profileImage' },
+    { name: 'drivingLicenseImage' }
+]), async function(req, res) {
+    try {
+        const profileImage = req.files['profileImage'] ? req.files['profileImage'][0].path : null;
+        const drivingLicenseImage = req.files['drivingLicenseImage'] ? req.files['drivingLicenseImage'][0].path : null;
 
-    const upload = new Upload({
-        srNo: 0,
-        orderNo: req.body.orderDate,
-        time: req.body.orderTime,
-        vehicleNumber: req.body.vehicleNumber,
-        passengers: req.body.passengers,
-        females: Number(req.body.females),
-        males: Number(req.body.males),
-        goods: req.body.goods,
-        profileImage: profileImage,
-        drivingLicenseImage: drivingLicenseImage
-    });
-
-    upload.save()
-        .then(() => {
-            res.redirect("/tourist-data");
-        })
-        .catch((err) => {
-            console.error("Error saving upload data:", err);
-            res.status(500).send("Error saving upload data");
+        const upload = new Upload({
+            orderNo: req.body.orderDate,
+            time: req.body.orderTime,
+            vehicleNumber: req.body.vehicleNumber,
+            passengers: req.body.passengers,
+            females: Number(req.body.females),
+            males: Number(req.body.males),
+            goods: req.body.goods,
+            profileImage,
+            drivingLicenseImage
         });
+
+        await upload.save();
+        res.redirect("/tourist-data");
+    } catch (err) {
+        console.error("Error saving upload data:", err);
+        res.status(500).send("Error saving upload data");
+    }
 });
 
-app.get("/latest-data",function(req,res){
-Upload.find({})
-.sort({ _id: -1 }) // Sort by most recent first
-.limit(100) // Limit to 10 records
-.then((data) => {
-    if(req.isAuthenticated()){
-        res.render("latest-data",{
-            isAuthenticated: req.isAuthenticated(),
+app.get("/latest-data", ensureAuthenticated, async function(req, res) {
+    try {
+        const data = await Upload.find({})
+            .sort({ _id: -1 })
+            .limit(100);
+            
+        res.render("latest-data", {
+            isAuthenticated: true,
             user: req.user,
             title: "Latest Data",
             path: "/latest-data",
             data
-        })
-        console.log(data)
+        });
+    } catch (err) {
+        console.error("Error fetching latest data:", err);
+        res.status(500).send("Error fetching data");
     }
-    else{
-        res.redirect("/login")
-    }
-    
-})
+});
 
-
-
-
-
-
-
-app.get("/previous-data",function(req,res){
-Upload.find({})
-.sort({ _id: 1 }) // Sort by most recent first
-.limit(100) // Limit to 10 records
-.then((data) => {
-    if(req.isAuthenticated()){
-        res.render("previous-data",{
-            isAuthenticated: req.isAuthenticated(),
+app.get("/previous-data", ensureAuthenticated, async function(req, res) {
+    try {
+        const data = await Upload.find({})
+            .sort({ _id: 1 })
+            .limit(100);
+            
+        res.render("previous-data", {
+            isAuthenticated: true,
             user: req.user,
             title: "Previous Data",
             path: "/previous-data",
-            data    
-        })
+            data
+        });
+    } catch (err) {
+        console.error("Error fetching previous data:", err);
+        res.status(500).send("Error fetching data");
     }
-})
-})
+});
 
-
-const AdminSchema = mongoose.Schema({
-fullname: String,
-permanentAddress: String,
-position: String,
-phoneNumber: String,
-email: String,
-cnic: String
-
-
+const AdminSchema = new mongoose.Schema({
+    fullname: String,
+    permanentAddress: String,
+    position: String,
+    phoneNumber: String,
+    email: String,
+    cnic: String,
+    profileImage: String
 });
 
 const Admin = mongoose.model("admin", AdminSchema);
 
-
-app.get("/profile", function(req, res) {
-    if (req.isAuthenticated()) {
-        Admin.findOne({})
-            .then((data) => {
-                res.render("profile", {
-                    isAuthenticated: req.isAuthenticated(),
-                    user: req.user,
-                    title: "Profile",
-                    path: "/profile",
-                    data
-                });
-                console.log(data);
-            });
-    } else {
-        res.redirect("/login");
-    }
-});
-
-app.post("/admin-form", function(req, res) {
-    Admin.findOne({})
-        .then((existingAdmin) => {
-            if (!existingAdmin) {
-                // Create new admin if none exists
-                const admin = new Admin({
-                    fullname: req.body.fullname,
-                    permanentAddress: req.body.permanentAddress,
-                    position: req.body.position,
-                    phoneNumber: req.body.mobile,
-                    email: req.body.email,
-                    cnic: req.body.cnic
-                });
-                return admin.save();
-            } else {
-                // Update existing admin data
-                existingAdmin.fullname = req.body.fullname;
-                existingAdmin.permanentAddress = req.body.permanentAddress;
-                existingAdmin.position = req.body.position;
-                existingAdmin.phoneNumber = req.body.mobile;
-                existingAdmin.email = req.body.email;
-                existingAdmin.cnic = req.body.cnic;
-                return existingAdmin.save();
-            }
-        })
-        .then(() => {
-            res.redirect("/profile");
-        })
-        .catch((err) => {
-            console.error("Error saving/updating admin data:", err);
-            res.status(500).send("Error saving/updating admin data");
-        });
-});
-
-// Profile image upload route
-app.post('/upload-profile-image', ensureAuthenticated, upload.single('profileImage'), async function(req, res) {
+app.get("/profile", ensureAuthenticated, async function(req, res) {
     try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: 'No file uploaded' });
-        }
-
-        const user = await User.findById(req.user._id);
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
-
-        // Update user's profile image path
-        user.profileImage = req.file.path;
-        await user.save();
-
-        res.json({
-            success: true,
-            imageUrl: '/' + req.file.path
+        const data = await Admin.findOne({});
+        res.render("profile", {
+            isAuthenticated: true,
+            user: req.user,
+            title: "Profile",
+            path: "/profile",
+            data
         });
     } catch (err) {
-        console.error('Error uploading profile image:', err);
-        res.status(500).json({ success: false, message: 'Error uploading image' });
+        console.error("Error fetching profile:", err);
+        res.status(500).send("Error fetching profile");
     }
-})
+});
 
+app.post("/admin-form", async function(req, res) {
+    try {
+        const adminData = {
+            fullname: req.body.fullname,
+            permanentAddress: req.body.permanentAddress,
+            position: req.body.position,
+            phoneNumber: req.body.mobile,
+            email: req.body.email,
+            cnic: req.body.cnic
+        };
 
+        const existingAdmin = await Admin.findOne({});
+        if (!existingAdmin) {
+            await Admin.create(adminData);
+        } else {
+            Object.assign(existingAdmin, adminData);
+            await existingAdmin.save();
+        }
+
+        res.redirect("/profile");
+    } catch (err) {
+        console.error("Error saving/updating admin data:", err);
+        res.status(500).send("Error saving/updating admin data");
+    }
+});
 
 app.post("/subadmin-form", function(req, res) {
-    const username = req.body.email;
-    const password = req.body.password;
-    User.register({ username: username }, password, function(err, user) {
+    User.register({ username: req.body.email }, req.body.password, function(err, user) {
         if (err) {
-            console.log(err);
-            res.redirect("error");
-        } else {
-            req.login(user, function(err) {
-                if (err) {
-                    console.log(err);
-                    res.redirect("error");
-                } else {
-                    // Ensure profile image is retained
-                    user.profileImage = req.user.profileImage;
-                    user.save().then(() => {
-                        res.redirect("/");
-                    }).catch((saveErr) => {
-                        console.error("Error saving user profile image:", saveErr);
-                        res.redirect("error");
-                    });
-                }
-            });
+            console.error(err);
+            return res.redirect("error");
         }
+        req.login(user, function(err) {
+            if (err) {
+                console.error(err);
+                return res.redirect("error");
+            }
+            user.profileImage = req.user.profileImage;
+            user.save()
+                .then(() => res.redirect("/"))
+                .catch((err) => {
+                    console.error("Error saving user profile image:", err);
+                    res.redirect("error");
+                });
+        });
     });
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).render('error', {
@@ -545,10 +470,7 @@ app.use((err, req, res, next) => {
     });
 });
 
-
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
 });
