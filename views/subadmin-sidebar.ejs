@@ -180,6 +180,10 @@
         /* Remove media query for .header / .search-bar - belongs in layout.ejs */
     
     </style>
+    <style>
+        /* Offset header by sidebar width */
+      
+    </style>
     
     <!-- Sidebar HTML Structure -->
     <div class="sidebar">
@@ -187,11 +191,11 @@
             <h2>TP GB</h2> <!-- Shortened Title for potential display later -->
         </div>
         <div class="sidebar-menu">
-            <a href="/" class="menu-item <%= path === '/' ? 'active' : '' %>">
+            <a href="/subadmin-dashboard" class="menu-item <%= path === '/' ? 'active' : '' %>">
                 <i class="fas fa-home"></i>
                 <span>Dashboard</span>
             </a>
-            <a href="/tourist-data" class="menu-item <%= path === '/tourist-data' ? 'active' : '' %>">
+            <a href="/subadmin-touristData" class="menu-item <%= path === '/subadmin-touristData' ? 'active' : '' %>">
                 <i class="fas fa-user"></i>
                 <span>Home</span>
             </a>
@@ -206,29 +210,20 @@
                 </a>
                 <div class="submenu">
                      <!-- Added Tourist Data back into the dropdown -->
-                    
-                    <a href="/latest-data" class="menu-item submenu-item <%= path === '/latest-data' ? 'active' : '' %>">
+                     
+                    <a href="/subadmin-latestData" class="menu-item submenu-item <%= path === '/latest-data' ? 'active' : '' %>">
                         <span>Latest Data</span>
                     </a>
-                    <a href="/previous-data" class="menu-item submenu-item <%= path === '/previous-data' ? 'active' : '' %>">
+                    <a href="/subadmin-previousData" class="menu-item submenu-item <%= path === '/previous-data' ? 'active' : '' %>">
                         <span>Previous Data</span>
                     </a>
                 </div>
             </div>
             <!-- End Dropdown Menu -->
     
-            <a href="/admins" class="menu-item <%= path === '/admins' ? 'active' : '' %>">
-                <i class="fas fa-shield-alt"></i> <!-- Changed icon for Admins -->
-                <span>Admins</span>
-            </a>
-            <a href="/profile" class="menu-item <%= path === '/profile' ? 'active' : '' %>">
-                <i class="fas fa-user-circle"></i>
-                <span>Profile</span>
-            </a>
-            <a href="/settings" class="menu-item <%= path === '/settings' ? 'active' : '' %>">
-                <i class="fas fa-cog"></i>
-                <span>Setting</span>
-            </a>
+         
+         
+          
              <!-- Logout Link -->
              <a href="/logout" class="menu-item">
                 <i class="fas fa-sign-out-alt"></i>

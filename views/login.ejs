@@ -36,8 +36,8 @@
             padding: 2.5rem;
             border-radius: 16px;
             box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 450px;
+            width: 120%;
+            max-width: 600px; /* Increased max-width for wider form */
             position: relative;
             overflow: hidden;
         }
@@ -332,16 +332,26 @@
             <span>OR</span>
         </div>
         
-        <div class="social-login">
+        <!-- <div class="social-login">
             <a href="/auth/google" class="social-btn">
                 <i class="fab fa-google"></i>
             </a>
           
-        </div>
+        </div> -->
+       
         
-        <div class="register-link">
-            Don't have an account? <a href="/register">Register here</a>
-        </div>
+      
+
+<button class="btn-primary subadmin-btn" onclick="window.location.href='/subadmin-login'" style="margin-top: 1rem; background-color: #2c3e50; transition: all 0.3s ease;">
+    Sub Admin Login
+</button>
+<style>
+.subadmin-btn:hover {
+    background-color: #34495e !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
+}
+</style>
     </div>
 
     <script>

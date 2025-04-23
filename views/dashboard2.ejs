@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tourist Police GB Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/boxicons@2.0.7/css/boxicons.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f8f9fd;
+    }
+    .sidebar {
+      height: 100vh;
+      background-color: #081c3a;
+      color: white;
+      position: fixed;
+      width: 250px; /* Set a fixed width for the sidebar */
+    }
+    .sidebar .nav-link {
+      color: white;
+      padding: 10px 20px;
+      display: block;
+      text-decoration: none;
+    }
+    .sidebar .nav-link:hover {
+      background-color: #0a2a4a;
+    }
+    .content {
+      margin-left: 250px; /* Adjust content margin to accommodate sidebar */
+      padding: 20px;
+    }
+    .card-box {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    .progress-bar {
+      border-radius: 10px;
+      height: 15px;
+    }
+    .chart-container {
+      position: relative;
+      height: 300px;
+    }
+ 
+    .tourist-line-chart {
+      width: 800px;
+      height: 460px;
+    }
+    #line-chart {
+      height: 436px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      
+    }
+    .gender-chart{
+        height: 340px !important; 
+        width: 340px !important;
+    }
+    .gender-container{
+        display: flex;
+        justify-content: center;
+    }
+    .tourist-row {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .tourist-row:last-child {
+      border-bottom: none;
+    }
+    .icon-column {
+      width: 35px;
+      height: 35px;
+      background-color: #d1fae5;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15px;
+    }
+    .arrow-icon {
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 5px 5px 0 5px;
+      border-color: #06b6d4 transparent transparent transparent;
+    }
+    .name-column {
+      flex: 1;
+      font-weight: 500;
+    }
+    .country-column {
+      flex: 0.5;
+      color: #6b7280;
+    }
+    .date-column {
+      flex: 1;
+      text-align: center;
+      color: #6b7280;
+    }
+    .time-column {
+      flex: 1;
+      text-align: center;
+      color: #6b7280;
+    }
+    .status-column {
+      flex: 0.5;
+      text-align: right;
+      color: #10b981;
+      font-weight: 500;
+    }
+    .actions-column {
+      flex: 0.5;
+      text-align: right;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .dots {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #9ca3af;
+    }
+    .dots:hover {
+      color: #1f2937;
+    }
+    .dots::before {
+      content: "⋯";
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <%- include('subadmin-sidebar') -%>
+  </div>
+  <div class="content">
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-12 p-4">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <span>Welcome, User</span>
+          </div>
+          <div class="row mb-4">
+            <div class="col-md-3">
+              <div class="card-box text-center">
+                <p>Total Tourists this year</p>
+                <h4>1200+</h4>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card-box text-center">
+                <p>International Tourists</p>
+                <h4>500</h4>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card-box text-center">
+                <p>Local Tourists</p>
+                <h4>700</h4>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card-box text-center">
+                <p>Active Tourists</p>
+                <h4>09</h4>
+              </div>
+            </div>
+          </div>
+          <div class="row mb-4">
+            <div class="col-md-5">
+              <div class="card-box">
+                <h5>Gender</h5>
+                <div class="chart-container gender-container">
+                  <canvas id="genderChart" class="gender-chart"></canvas>
+                </div>
+                <div class="d-flex justify-content-around mt-3">
+                  <div class="text-center">
+                    <p class="mb-0" style="color:#3B82F6">Male</p>
+                    <strong style="color:#3B82F6"><%= maleCount %></strong>
+                  </div>
+                  <div class="text-center">
+                    <p class="mb-0" style="color:#ec4899">Female</p>
+                    <strong style="color:#ec4899"><%= femaleCount %></strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-7">
+              <div class="card-box" id="line-chart">
+                <h5>Number of Tourists Assisted</h5>
+                <div class="chart-container">
+                  <canvas id="touristChart" class="tourist-line-chart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-7">
+              <div class="card-box">
+                <h5>Active Tourists</h5>
+                <div class="tourist-list">
+                  <% tourists.forEach(tourist => { %>
+                    <div class="tourist-row">
+                      <div class="icon-column">
+                        <div class="arrow-icon"></div>
+                      </div>
+                      <div class="name-column"><%= tourist.name %></div>
+                      <div class="country-column"><%= tourist.country %></div>
+                      <div class="date-column"><%= tourist.date %></div>
+                      <div class="time-column"><%= tourist.time %></div>
+                      <div class="status-column"><%= tourist.status %></div>
+                      <div class="actions-column">
+                        <div class="dots"></div>
+                      </div>
+                    </div>
+                  <% }); %>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-5">
+              <div class="card-box">
+                <h5>Monthly Updates</h5>
+                <p>Active Tourists</p>
+                <div class="progress">
+                  <div class="progress-bar bg-primary" style="width: 70%">05</div>
+                </div>
+                <p class="mt-2">Resolved Cases</p>
+                <div class="progress">
+                  <div class="progress-bar bg-purple" style="width: 60%">05</div>
+                </div>
+                <p class="mt-2">Tourist Complaints Received</p>
+                <div class="progress">
+                  <div class="progress-bar bg-warning" style="width: 80%">05</div>
+                </div>
+                <p class="mt-2">Thread and Emergency</p>
+                <div class="progress">
+                  <div class="progress-bar bg-danger" style="width: 40%">05</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Charts initialization
+    const genderCtx = document.getElementById('genderChart');
+    const touristCtx = document.getElementById('touristChart');
+
+    new Chart(genderCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Male', 'Female'],
+        datasets: [
+          {
+            data: [<%= maleCount %>, <%= femaleCount %>],
+            backgroundColor: ['#3B82F6', '#ec4899'],
+            radius: '50%',
+            cutout: '40%',
+          }
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            display: true,
+          },
+        },
+      },
+    });
+
+    const current_date = new Date().getDate();
+    const current_month = new Date().getMonth() + 1;
+
+    // Generate realistic fluctuating data
+    function generateData() {
+      let data = [];
+      let currentValue = <%= userRegistrations %>;
+
+      data.push(currentValue); // Ensure minimum of 5
+
+      return data;
+    }
+
+    new Chart(touristCtx, {
+      type: 'line',
+      data: {
+        labels: Array.from({ length: 30 }, (_, i) => {
+          const date = new Date();
+          date.setDate(current_date + i);
+          return `${date.getDate()}/${date.getMonth() + 1}`;
+        }),
+        datasets: [{
+          label: 'User Registrations',
+          data: generateData(),
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          tension: 0.4,
+          fill: true,
+          pointRadius: 2,
+          borderWidth: 2,
+          pointHoverRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              usePointStyle: true,
+              boxWidth: 10
+            }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              autoSkip: true,
+              maxTicksLimit: 10
+            }
+          },
+          y: {
+            beginAtZero: false,
+            grid: {
+              color: 'rgba(200, 200, 200, 0.2)'
+            },
+            ticks: {
+              callback: function(value) {
+                return value + ' users';
+              }
+            }
+          }
+        },
+        interaction: {
+          mode: 'nearest',
+          axis: 'x',
+          intersect: false
+        }
+      }
+    });
+
+    // Add event listeners to the dots for interactivity
+    document.querySelectorAll('.dots').forEach(dots => {
+      dots.addEventListener('click', function() {
+        console.log('Menu clicked');
+        // Here you would typically show a context menu
+      });
+    });
+  </script>
+</body>
+</html>

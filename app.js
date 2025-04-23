@@ -102,7 +102,10 @@ passport.serializeUser(function(user, done) {
 
 passport.deserializeUser(async function(id, done) {
     try {
-        const user = await User.findById(id);
+        let user = await SubAdmin.findById(id);
+        if (!user) {
+            user = await User.findById(id);
+        }
         done(null, user);
     } catch (err) {
         done(err, null);
@@ -160,9 +163,20 @@ const UploadSchema = new mongoose.Schema({
     passengers: String,
     females: Number,
     males: Number,
+    cnic: String,
     goods: String,
     profileImage: String,
-    drivingLicenseImage: String
+    drivingLicenseImage: String,
+    vehiclePassengers: {
+        type: String,
+        enum: ['yes', 'no'],
+        default: 'no'
+    },
+    vehicleGoods: {
+        type: String,
+        enum: ['yes', 'no'],
+        default: 'no'
+    }
 });
 
 UploadSchema.pre('save', async function(next) {
@@ -310,8 +324,10 @@ app.get("/tourist-data", ensureAuthenticated, function(req, res) {
                 user: req.user,
                 title: "Tourist Data",
                 path: req.path,
-                data
+                data,
+                value : 1
             });
+
         })
         .catch((err) => {
             console.error("Error fetching tourist data:", err);
@@ -335,12 +351,23 @@ app.post('/upload', upload.fields([
             females: Number(req.body.females),
             males: Number(req.body.males),
             goods: req.body.goods,
+            cnic: req.body.cnic,
             profileImage,
-            drivingLicenseImage
+            drivingLicenseImage,
+            vehiclePassengers: req.body.vehiclePassengers || 'no',
+            vehicleGoods: req.body.vehicleGoods || 'no'
         });
 
         await upload.save();
-        res.redirect("/tourist-data");
+        console.log(upload);
+        console.log(req.body)
+        if(req.body.submit === "admin"){
+            res.redirect("/tourist-data");
+        }
+        else if(req.body.submit === "subadmin"){
+            res.redirect("/subadmin-touristData");
+        }
+       
     } catch (err) {
         console.error("Error saving upload data:", err);
         res.status(500).send("Error saving upload data");
@@ -351,33 +378,73 @@ app.get("/latest-data", ensureAuthenticated, async function(req, res) {
     try {
         const data = await Upload.find({})
             .sort({ _id: -1 })
-            .limit(100);
+            
             
         res.render("latest-data", {
             isAuthenticated: true,
             user: req.user,
             title: "Latest Data",
             path: "/latest-data",
-            data
+            data,
+            value: 1
         });
     } catch (err) {
         console.error("Error fetching latest data:", err);
         res.status(500).send("Error fetching data");
     }
 });
+app.get("/subadmin-latestData", ensureSubAdminAuthenticated, async function(req,res){
+    try {
+        const data = await Upload.find({})
+            .sort({ _id: -1 })
+            
+            
+        res.render("latest-data", {
+            isAuthenticated: true,
+            user: req.user,
+            title: "Latest Data",
+            path: "/latest-data",
+            data,
+            value: 2
+        });
+    } catch (err) {
+        console.error("Error fetching latest data:", err);
+        res.status(500).send("Error fetching data");
+    }
+})
 
 app.get("/previous-data", ensureAuthenticated, async function(req, res) {
     try {
         const data = await Upload.find({})
             .sort({ _id: 1 })
-            .limit(100);
+            
             
         res.render("previous-data", {
             isAuthenticated: true,
             user: req.user,
             title: "Previous Data",
             path: "/previous-data",
-            data
+            data,
+            value:1
+        });
+    } catch (err) {
+        console.error("Error fetching previous data:", err);
+        res.status(500).send("Error fetching data");
+    }
+});
+app.get("/subadmin-previousData", ensureSubAdminAuthenticated, async function(req, res) {
+    try {
+        const data = await Upload.find({})
+            .sort({ _id: 1 })
+            
+            
+        res.render("previous-data", {
+            isAuthenticated: true,
+            user: req.user,
+            title: "Previous Data",
+            path: "/previous-data",
+            data,
+            value:2
         });
     } catch (err) {
         console.error("Error fetching previous data:", err);
@@ -438,29 +505,192 @@ app.post("/admin-form", async function(req, res) {
         res.status(500).send("Error saving/updating admin data");
     }
 });
+const SubAdminSchema = new mongoose.Schema({
+    fullname: String,
+    permanentAddress: String,
+    position: String,
+    phoneNumber: String,
+    email: String,
+    cnic: String,
+    password: String // Add password field
+});
 
-app.post("/subadmin-form", function(req, res) {
-    User.register({ username: req.body.email }, req.body.password, function(err, user) {
-        if (err) {
-            console.error(err);
-            return res.redirect("error");
+// Add Passport-Local Mongoose plugin to SubAdmin schema
+SubAdminSchema.plugin(passportLocalMongoose, { usernameField: 'email' });
+
+const SubAdmin = mongoose.model("subadmin", SubAdminSchema);
+
+// Configure Passport for SubAdmin
+passport.use('subadmin-local', SubAdmin.createStrategy());
+
+function ensureSubAdminAuthenticated(req, res, next) {
+    if (req.isAuthenticated() && req.user instanceof SubAdmin) {
+        return next();
+    }
+    res.redirect('/subadmin-login');
+}
+
+passport.serializeUser(function(user, done) {
+    done(null, user.id);
+});
+
+passport.deserializeUser(async function(id, done) {
+    try {
+        let user = await SubAdmin.findById(id);
+        if (!user) {
+            user = await User.findById(id);
         }
-        req.login(user, function(err) {
-            if (err) {
-                console.error(err);
-                return res.redirect("error");
-            }
-            user.profileImage = req.user.profileImage;
-            user.save()
-                .then(() => res.redirect("/"))
-                .catch((err) => {
-                    console.error("Error saving user profile image:", err);
-                    res.redirect("error");
-                });
+        done(null, user);
+    } catch (err) {
+        done(err, null);
+    }
+});
+
+// Registration route for SubAdmin
+app.post("/subadmin-form", function(req, res) {
+    SubAdmin.register(new SubAdmin({
+        fullname: req.body.fullname,
+        position: req.body.position,
+        phoneNumber: req.body.phoneNumber,
+        email: req.body.email,
+        cnic: req.body.cnic
+    }), req.body.password, function(err, subAdmin) {
+        if (err) {
+            console.error("Error registering SubAdmin:", err);
+            return res.status(500).send("Error registering SubAdmin");
+        }
+        passport.authenticate('subadmin-local')(req, res, function() {
+            res.redirect("/subadmin-dashboard");
         });
     });
 });
 
+// Login route for SubAdmin
+app.post("/subadmin-login", passport.authenticate('subadmin-local', {
+    successRedirect: "/subadmin-dashboard",
+    failureRedirect: "/subadmin-login"
+}));
+
+app.get("/subadmin-dashboard", ensureSubAdminAuthenticated, async function(req, res) {
+    try {
+        const uploads = await Upload.find();
+        const maleCount = uploads.reduce((total, upload) => total + (upload.males || 0), 0);
+        const femaleCount = uploads.reduce((total, upload) => total + (upload.females || 0), 0);
+        const userRegistrations = maleCount + femaleCount;
+        const tourists = [
+            { name: "Samantha W.", country: "PKR", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
+            { name: "John D.", country: "USA", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
+            { name: "Samantha W.", country: "PKR", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
+            { name: "John D.", country: "USA", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
+        ];
+        res.render('dashboard2', {
+            user: req.user,
+            title: 'Dashboard',
+            path: req.path,
+            maleCount,
+            femaleCount,
+            userRegistrations,
+            tourists
+        });
+    } catch (err) {
+        console.error("Error fetching uploads:", err);
+        res.status(500).send("Error fetching uploads");
+    }
+});
+
+app.get("/subadmin-login", function(req, res) {
+res.render("subadmin-login")
+});
+
+
+
+
+app.get("/admins",function(req,res){
+    if(req.isAuthenticated()){
+        res.render("admin",{
+            isAuthenticated: true,
+            user: req.user,
+            title: "Admins",
+            path: "/admins"
+        });
+    }else{
+        res.redirect("/login");
+    }
+})
+
+app.get("/tourist_info/:topic", function(req, res) {
+    if (req.isAuthenticated()) {
+        const no = req.params.topic;
+        console.log(no);
+        Upload.findOne({ srNo: no })
+            .then((data) => {
+                console.log(data); // Log data to verify contents
+                res.render("tourist_info", {
+                    isAuthenticated: true,
+                    user: req.user,
+                    title: "Tourist Info",
+                    path: "/tourist_info",
+                    data,
+                    value: 1
+                });
+            })
+            .catch((err) => {
+                console.error("Error fetching tourist info:", err);
+                res.status(500).send("Error fetching tourist info");
+            });
+    } else {
+        res.redirect("/login");
+    }
+});
+app.get("/tourists/:topic", ensureSubAdminAuthenticated, function(req,res){
+    const no = req.params.topic;
+    console.log(no);
+    Upload.findOne({ srNo: no })
+        .then((data) => {
+            console.log(data); // Log data to verify contents
+            res.render("tourist_info", {
+                isAuthenticated: true,
+                user: req.user,
+                title: "Tourist Info",
+                path: "/tourist_info",
+                data,
+                value: 2
+            });
+
+        })
+        .catch((err) => {
+            console.error("Error fetching tourist info:", err);
+            res.status(500).send("Error fetching tourist info");
+        });
+})
+
+
+
+
+app.get("/subadmin-touristData", ensureSubAdminAuthenticated, function(req, res) {
+    Upload.find({})
+    .sort({ _id: -1 })
+    .limit(10)
+    .then((data) => {
+        res.render("tourist_data", {
+            isAuthenticated: true,
+            user: req.user,
+            title: "Tourist Data",
+            path: req.path,
+            data,
+            value : 2
+        });
+
+    })
+    .catch((err) => {
+        console.error("Error fetching tourist data:", err);
+        res.status(500).send("Error fetching tourist data");
+    });
+    
+});
+
+
+// ERROR HANDLING
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).render('error', {

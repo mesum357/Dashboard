@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Latest Data</title>
-    <link rel="stylesheet" href="/css/styles.css"> <!-- Assuming you have a styles.css file -->
+    <link rel="stylesheet" href="/css/styles.css">
     <style>
         /* Add styles directly here if not using external CSS */
         .latest-data-table {
@@ -61,11 +61,41 @@
             color: #B06C5D;
             border: 1px solid #B06C5D;
         }
+
+        .pagination {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .pagination button {
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            background-color: #f5f5f5;
+        }
+
+        .pagination button.active {
+            background-color: #B06C5D;
+            color: white;
+        }
     </style>
 </head>
 <body>
-<%- include('sidebar') -%>
-
+<% if (typeof value !== 'undefined') { %>
+    <% if (value === 1) { %>
+        <%- include('sidebar') -%>
+    <% } else if (value === 2) { %>
+        <%- include('subadmin-sidebar') -%>
+    <% } else { %>
+        <% console.error('Invalid value:', value) %>
+    <% } %>
+<% } else { %>
+    <% console.error('Value is undefined') %>
+<% } %>
 <div class="container">
     <h3>Latest Data</h3>
     <table class="latest-data-table">
@@ -78,30 +108,74 @@
                 <th>No of Females</th>
                 <th>No of Males</th>
                 <th>Total Passengers</th>
-                <th>V Number</th>
+                
             </tr>
         </thead>
-        <tbody>
-            <% data.forEach((data) => { %>
-                <tr>
-                    <td><%= data.srNo %></td>
-                    <td><%= data.orderDate %></td>
-                    <td><%= data.time %></td>
-                    <td><%= data.passengers %></td>
-                    <td><%= data.males %></td>
-                    <td><%=  data.females %></td>
-                    <td><%= data.goods  %></td>
-                    <td><%= data.vehicleNumber  %></td>
-                </tr>
-            <% }); %>
+        <tbody id="data-table-body">
+              <% if (typeof data !== 'undefined' && data.length > 0) { %>
+                        <% data.forEach((upload, index) => { %>
+                            <tr class="data-row" style="cursor: pointer;" onclick="window.location.href='/tourist_info/<%= upload.srNo %>'">
+                                <td><%= upload.srNo %></td>
+                                <td><%= upload.orderNo %></td>
+                                <td><%= upload.time %></td>
+                                <td><%= upload.vehicleNumber %></td>
+                                <td><%= upload.females || 0 %></td>
+                                <td><%= upload.males || 0 %></td>
+                                <td><%= upload.passengers || ((upload.males || 0) + (upload.females || 0)) %></td>
+                                <input type="hidden" name="no" value="<%= upload.srNo %>">
+                            </tr>
+                        <% }); %>
+                    <% } else { %>
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 20px;">No previous data available.</td>
+                        </tr>
+                    <% } %>
         </tbody>
     </table>
+
+    <div class="pagination" id="pagination-controls"></div>
 
     <div class="action-buttons">
         <button class="btn-send">Send Details</button>
         <button class="btn-print" onclick="window.print()">Print Now</button>
     </div>
 </div>
+
+<script>
+    const rowsPerPage = 10; // Adjusted to a more reasonable number for testing
+    const dataRows = document.querySelectorAll('.data-row');
+    const paginationControls = document.getElementById('pagination-controls');
+    let currentPage = 1;
+
+    function displayPage(page) {
+        const start = (page - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+
+        dataRows.forEach((row, index) => {
+            row.style.display = (index >= start && index < end) ? '' : 'none';
+        });
+
+        updatePaginationControls(page);
+    }
+
+    function updatePaginationControls(page) {
+        paginationControls.innerHTML = '';
+        const totalPages = Math.ceil(dataRows.length / rowsPerPage);
+
+        for (let i = 1; i <= totalPages; i++) {
+            const button = document.createElement('button');
+            button.textContent = i;
+            button.classList.toggle('active', i === page);
+            button.addEventListener('click', () => {
+                currentPage = i;
+                displayPage(i);
+            });
+            paginationControls.appendChild(button);
+        }
+    }
+
+    displayPage(currentPage);
+</script>
 
 </body>
 </html>

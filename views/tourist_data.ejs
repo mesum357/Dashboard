@@ -5,221 +5,237 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tourist Data</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Assuming chart.js is not needed on this specific page, removed for clarity -->
-    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
-    <!-- Link to your CSS file -->
     <link rel="stylesheet" href="/css/tourist_data.css">
-    <!-- Add styles directly here or ensure they are in tourist_data.css -->
     <style>
-        /* Basic table styling */
-        .previous-data-table {
+        /* Camera modal styles */
+        #cameraModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px; /* Add some space above the table */
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
         }
 
-        .previous-data-table th,
-        .previous-data-table td {
-            padding: 10px 12px; /* Adjust padding */
-            border-bottom: 1px solid #ddd;
-            text-align: left; /* Align text to the left */
-            vertical-align: middle; /* Align content vertically */
+        #cameraContainer {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            position: relative;
         }
 
-        .previous-data-table thead th {
-            background-color: #f5f5f5;
-            border-bottom-width: 2px; /* Thicker bottom border for header */
-            font-weight: 600; /* Make header text bolder */
+        #videoPreview {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
         }
 
-        .previous-data-table tbody tr:hover {
-            background-color: #f9f9f9; /* Add a subtle hover effect */
-        }
-
-        .previous-data-table img {
-            width: 50px; /* Slightly smaller image */
-            height: 50px; /* Maintain aspect ratio */
-            object-fit: cover; /* Ensure image covers the area */
-            border-radius: 4px; /* Slightly rounded corners */
-            vertical-align: middle;
-        }
-
-        /* Responsive wrapper */
-        .table-responsive-wrapper {
-            overflow-x: auto; /* Enable horizontal scrolling */
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-            margin-bottom: 15px; /* Space below the scrolling area */
-        }
-
-        /* Button styling (example) */
-        .action-buttons {
-            margin-top: 20px;
+        #cameraButtons {
             display: flex;
-            gap: 10px; /* Space between buttons */
+            justify-content: space-between;
+            margin-top: 10px;
         }
 
-        .action-buttons button {
+        #takePhotoBtn, #closeCameraBtn {
+            padding: 8px 16px;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
-            font-weight: 500;
+            font-size: 14px;
         }
 
-        .btn-send {
-            background-color: #B06C5D; /* Keep original color */
+        #takePhotoBtn {
+            background-color: #B06C5D;
             color: white;
         }
 
-        .btn-print {
-            background-color: transparent;
-            color: #B06C5D; /* Keep original color */
-            border: 1px solid #B06C5D; /* Keep original border */
+        #closeCameraBtn {
+            background-color: #f1f1f1;
+            color: #333;
         }
 
-        /* Add other styles from your tourist_data.css or here */
-        /* ... */
+        #takePhotoBtn:hover {
+            background-color: #9a5a4e;
+        }
 
+        #closeCameraBtn:hover {
+            background-color: #e0e0e0;
+        }
+        /* Subadmin sidebar fix */
+        .subadmin-sidebar {
+            width: 250px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            background: #081c3a;
+            color: white;
+            z-index: 100;
+        }
+       
+        @media (max-width: 768px) {
+            .subadmin-sidebar {
+                width: 180px;
+            }
+            .main-content-with-subadmin {
+                margin-left: 180px;
+            }
+        }
     </style>
 </head>
 <body>
-   <%- include('sidebar') -%> 
+<% if (value === 1) { %>
+    <%- include('sidebar') %>
+<% } else if (value === 2) { %>
+    <div class="subadmin-sidebar">
+        <%- include('subadmin-sidebar') %>
+    </div>
+    <div class="main-content-with-subadmin">
+<% } else { %>
+    <% console.log("Error") %>
+<% } %>
 
-            
-            <div class="order-info">
-                <div class="order-date">
-                    <label>Order Date</label>
-                    <input type="text" name="orderDate" value="<%= new Date().toLocaleDateString() %>" readonly required>
-                </div>
-                <div class="order-time"> 
-                    <label>Time</label>
-                    <input type="text" name="orderTime" value="<%= new Date().toLocaleTimeString() %>" readonly  required>
-                </div>
-                <div class="vehicle-number">
-                    <label>Vehicle Number</label>
-                    <input type="text" name="vehicleNumber" required>
-                </div>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <div class="order-info">
+            <div class="order-date">
+                <label>Order Date</label>
+                <input type="text" name="orderDate" value="<%= new Date().toLocaleDateString() %>" readonly required>
             </div>
+            <div class="order-time"> 
+                <label>Time</label>
+                <input type="text" name="orderTime" value="<%= new Date().toLocaleTimeString() %>" readonly required>
+            </div>
+            <div class="vehicle-number">
+                <label>Vehicle Number</label>
+                <input type="text" name="vehicleNumber" id="vehicleNumber" required>
+            </div>
+            <div class="vehicle-number">
+                <label>CNIC Number</label>
+                <input type="text" name="cnic" id="cnicNumber" required>
+            </div>
+        </div>
 
-            <div class="personal-info">
-                <h3>Personal Information</h3>
-                <div class="data-main">
-                    <div class="personal-info-main">
-                        <div class="profile-image">
-                            <label>Profile Image</label>
-                            <div class="image-upload">
-                                <div class="upload-container">
-                                    <img src="/assets/images/Input.png" alt="Profile Preview" id="profilePreview">
-                                    <input type="file" name="profileImage" id="profileInput" accept="image/*" onchange="previewImage(this, 'profilePreview')">
-                                    <label for="profileInput" class="upload-label">Choose File</label>
-                                </div>
+        <div class="personal-info">
+            <h3>Personal Information</h3>
+            <div class="data-main">
+                <div class="personal-info-main">
+                    <div class="profile-image">
+                        <label>Profile Image</label>
+                        <div class="image-upload">
+                            <div class="upload-container">
+                                <img src="/assets/images/Input.png" alt="Profile Preview" id="profilePreview">
+                                <input type="file" name="profileImage" id="profileInput" accept="image/*" capture="environment" onchange="previewImage(this, 'profilePreview')">
+                                <label for="profileInput" class="upload-label">Choose File</label>
+                                <button type="button" onclick="openCamera('profile')">Capture Image</button>
                             </div>
                         </div>
-                        <div class="driving-license">
-                            <label>Driving License</label>
-                            <div class="image-upload">
-                                <div class="upload-container">
-                                    <img src="/assets/images/Input.png" alt="License Preview" id="licensePreview">
-                                    <input type="file" name="drivingLicenseImage" id="licenseInput" accept="image/*" onchange="previewImage(this, 'licensePreview')">
-                                    <label for="licenseInput" class="upload-label">Choose File</label>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Keep the previewImage function -->
-                        <script>
-                            function previewImage(input, previewId) {
-                                const preview = document.getElementById(previewId);
-                                if (input.files && input.files[0]) {
-                                    const reader = new FileReader();
-                                    reader.onload = function(e) {
-                                        preview.src = e.target.result;
-                                    }
-                                    reader.readAsDataURL(input.files[0]);
-                                } else {
-                                     // Optional: Reset to default image if no file selected
-                                     // preview.src = '/assets/images/Input.png';
-                                }
-                            }
-                        </script>
                     </div>
-                    <div class="passenger-info-main">
-                        <div class="passenger-info">
-                            <div class="total-passengers">
-                                <label>Total Passengers</label>
-                                <!-- Fixed missing quote in name attribute -->
-                                <input type="number" placeholder="No of Passengers" name="passengers"  required>
-                            </div>
-                            <div class="number-females">
-                                <label>Number of Females</label>
-                                <input type="number" placeholder="Number of Female Passengers" name="females" required>
-                            </div>
-                            <div class="number-males">
-                                <label>Number of Males</label>
-                                <input type="number" placeholder="Number of Male Passengers" name="males" required>
+                    <div class="driving-license">
+                        <label>Driving License</label>
+                        <div class="image-upload">
+                            <div class="upload-container">
+                                <img src="/assets/images/Input.png" alt="License Preview" id="licensePreview">
+                                <input type="file" name="drivingLicenseImage" id="licenseInput" accept="image/*" capture="environment" onchange="previewImage(this, 'licensePreview')">
+                                <label for="licenseInput" class="upload-label">Choose File</label>
+                                <button type="button" onclick="openCamera('license')">Capture Image</button>
                             </div>
                         </div>
-                        <div class="vehicle-info">
-                            <div class="vehicle-passengers">
-                                <h3>Vehicle with Passengers</h3>
-                                <input type="checkbox" class="checkbox">
-                            </div>
-                            <div class="vehicle-goods">
-                                <h3>Vehicle with Goods</h3>
-                                <input type="checkbox" class="checkbox">
-                            </div>
-                            <div class="type-goods">
-                                <label>Type of Goods</label>
-                                <input type="text" placeholder="Enter type of goods" name="goods" required>
+                    </div>
+
+                    <!-- Camera Modal -->
+                    <div id="cameraModal" class="modal">
+                        <div id="cameraContainer">
+                            <h3>Capture Image</h3>
+                            <video id="videoPreview" autoplay></video>
+                            <div id="cameraButtons">
+                                <button id="takePhotoBtn" onclick="takePhoto(event)">Capture</button>
+                                <button id="closeCameraBtn" onclick="closeCamera()">Close</button>
                             </div>
                         </div>
-                     </div>
+                    </div>
+
+                
                 </div>
-                <button type="submit" class="save-data">Save Data</button> <!-- Ensure button type is submit -->
+
+                <div class="passenger-info-main">
+                    <div class="passenger-info">
+                        <div class="total-passengers">
+                            <label>Total Passengers</label>
+                            <input type="number" placeholder="No of Passengers" name="passengers" required>
+                        </div>
+                        <div class="number-females">
+                            <label>Number of Females</label>
+                            <input type="number" placeholder="Number of Female Passengers" name="females" required>
+                        </div>
+                        <div class="number-males">
+                            <label>Number of Males</label>
+                            <input type="number" placeholder="Number of Male Passengers" name="males" required>
+                        </div>
+                    </div>
+                    <div class="vehicle-info">
+                        <div class="vehicle-passengers">
+                            <h3>Vehicle with Passengers</h3>
+                            <input type="checkbox" class="checkbox" id="vehiclePassengersCheckbox">
+                            <input type="hidden" name="vehiclePassengers" id="vehiclePassengersHidden" value="no">
+                        </div>
+                        <div class="vehicle-goods">
+                            <h3>Vehicle with Goods</h3>
+                            <input type="checkbox" class="checkbox" id="vehicleGoodsCheckbox">
+                            <input type="hidden" name="vehicleGoods" id="vehicleGoodsHidden" value="no">
+                        </div>
+                        <div class="type-goods">
+                            <label>Type of Goods</label>
+                            <input type="text" placeholder="Enter type of goods" name="goods">
+                        </div>
+                    </div>
+                </div>
             </div>
+<% if(value === 1) { %>
+    <button type="submit" class="save-data" name="submit" value="admin">Save Data</button>
+<% } else if(value === 2) { %>
+    <button type="submit" class="save-data" name="submit" value="subadmin">Save Data</button>
+<% } else { %>
+    <% console.log("Error") %>
+<% } %>
         </div>
     </form>
 
     <!-- SECTION 2 -->
     <div class="section-2">
         <h3>Previous Data</h3>
-        <!-- Add the responsive wrapper div -->
         <div class="table-responsive-wrapper">
-            <!-- Add class to table, remove inline styles -->
             <table class="previous-data-table">
                 <thead>
-                    <!-- Remove inline styles from tr and th -->
                     <tr>
                         <th>SL No</th>
-                        <th>Order No</th> <!-- Changed from CNIC -->
-                        <th>Time</th> <!-- Changed from Driving License -->
-                        <th>Vehicle No</th> <!-- Changed from Type of goods -->
-                        <th>Females</th> <!-- Changed from No of Females -->
-                        <th>Males</th> <!-- Changed from No of Males -->
-                        <th>Total Pax</th> <!-- Changed from Total Passengers -->
-                        <th>Image</th> <!-- Changed from V Number -->
+                        <th>Order No</th>
+                        <th>Time</th>
+                        <th>Vehicle No</th>
+                        <th>Females</th>
+                        <th>Males</th>
+                        <th>Total Pass</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Ensure 'data' variable is passed from the route -->
                     <% if (typeof data !== 'undefined' && data.length > 0) { %>
                         <% data.forEach((upload, index) => { %>
-                            <!-- Remove inline styles from tr and td -->
-                            <tr>
-                                <td><%= upload.srNo %></td> <!-- Use index for SL No -->
+                            <tr style="cursor: pointer;" 
+                                onclick="window.location.href='<%= value === 1 ? `/tourist_info/${upload.srNo}` : `/tourists/${upload.srNo}` %>'">
+                                <td><%= upload.srNo %></td>
                                 <td><%= upload.orderNo %></td>
                                 <td><%= upload.time %></td>
                                 <td><%= upload.vehicleNumber %></td>
                                 <td><%= upload.females || 0 %></td>
                                 <td><%= upload.males || 0 %></td>
-                                <td><%= upload.passengers || ( (upload.males || 0) + (upload.females || 0) ) %></td>
-                                <td>
-                                    <!-- Check if profileImage exists -->
-                                    <% if (upload.profileImage) { %>
-                                        <img src="<%= upload.profileImage %>" alt="Profile">
-                                    <% } else { %>
-                                        
-                                    <% } %>
-                                </td>
+                                <td><%= upload.passengers || ((upload.males || 0) + (upload.females || 0)) %></td>
+                                <input type="hidden" name="no" value="<%= upload.srNo %>">
                             </tr>
                         <% }); %>
                     <% } else { %>
@@ -229,16 +245,123 @@
                     <% } %>
                 </tbody>
             </table>
-        </div> <!-- Close table-responsive-wrapper -->
+        </div>
 
-        <!-- Add class to button container, remove inline styles -->
         <div class="action-buttons">
             <button class="btn-send">Send Details</button>
-            <button class="btn-print" onclick="window.print()">Print Now</button> <!-- Use window.print() -->
+            <button class="btn-print" onclick="window.print()">Print Now</button>
         </div>
     </div>
-
-    <!-- Removed redundant image upload script block -->
-
 </body>
+    <!-- Keep the previewImage function -->
+    <script>
+const vehicleNumberInput = document.getElementById('vehicleNumber');
+vehicleNumberInput.addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+});
+
+
+        function previewImage(input, previewId) {
+            const preview = document.getElementById(previewId);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                preview.src = '/assets/images/Input.png';
+            }
+        }
+
+        // Camera functionality
+        let cameraStream = null;
+        let currentCaptureTarget = null;
+
+        function openCamera(target) {
+            currentCaptureTarget = target;
+            document.getElementById('cameraModal').style.display = 'flex';
+            startCamera();
+        }
+
+        function startCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    cameraStream = stream;
+                    const video = document.getElementById('videoPreview');
+                    video.srcObject = stream;
+                    video.play();
+                })
+                .catch(error => {
+                    console.error('Error accessing camera:', error);
+                    alert('Unable to access camera. Please allow camera permissions.');
+                });
+        }
+
+        function takePhoto(event) {
+            event.preventDefault(); // Prevent form submission
+
+            const video = document.getElementById('videoPreview');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const dataUrl = canvas.toDataURL('image/png');
+            const preview = document.getElementById(currentCaptureTarget === 'profile' ? 'profilePreview' : 'licensePreview');
+            preview.src = dataUrl;
+
+            // Set the file input value (requires Blob conversion)
+            const input = currentCaptureTarget === 'profile' ? document.getElementById('profileInput') : document.getElementById('licenseInput');
+            const fileName = `captured-${Date.now()}.png`;
+            const blob = dataUrlToBlob(dataUrl);
+            const file = new File([blob], fileName, { type: 'image/png' });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            input.files = dataTransfer.files;
+
+            closeCamera();
+        }
+
+        function closeCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            document.getElementById('cameraModal').style.display = 'none';
+        }
+
+        function dataUrlToBlob(dataUrl) {
+            const arr = dataUrl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        }
+
+        // Close camera when modal is clicked outside
+        document.getElementById('cameraModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeCamera();
+            }
+        });
+
+        // Update hidden input based on checkbox state
+        document.getElementById('vehiclePassengersCheckbox').addEventListener('change', function() {
+            document.getElementById('vehiclePassengersHidden').value = this.checked ? 'yes' : 'no';
+        });
+
+        document.getElementById('vehicleGoodsCheckbox').addEventListener('change', function() {
+            document.getElementById('vehicleGoodsHidden').value = this.checked ? 'yes' : 'no';
+        });
+    </script>
 </html>
