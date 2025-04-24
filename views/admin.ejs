@@ -9,47 +9,87 @@
 <body>
   <%- include('sidebar') %> <!-- Sidebar included here -->
   <div class="admin-container">
-    <div class="admin-sidebar">
+    <div class="admin-sidebar" style="border-radius: 10px;">
       <nav class="sidebar-nav">
         <ul>
-          <li><a href="#" class="nav-link"><i class="fas fa-users"></i> Administrators <i class="fas fa-chevron-right"></i></a></li>
-          <li><a href="#" class="nav-link"><i class="fas fa-cog"></i> Admin Settings <i class="fas fa-chevron-right"></i></a></li>
+          <li><a href="#" class="nav-link" id="show-admins"><i class="fas fa-users"></i> Administrators <i class="fas fa-chevron-right"></i></a></li>
+          <li><a href="#" class="nav-link" id="show-settings"><i class="fas fa-cog"></i> Admin Settings <i class="fas fa-chevron-right"></i></a></li>
         </ul>
       </nav>
     </div>
     <div class="main-content" style="margin: 0;">
-      <div class="content-header">
-        <h3>Administrators</h3>
+      <div id="admins-section">
+        <div class="content-header">
+          <h3>Administrators</h3>
+        </div>
+        <div class="table-container" style="width: 110%; max-width: 110%;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Position</th>
+                <th>Email</th>
+                <th>CNIC</th>
+               
+              </tr>
+            </thead>
+            <tbody>
+            
+<% data.forEach((user)=>{ %>
+  <tr>
+    <td><%= user.fullname %></td>
+    <td><span class="badge badge-police"><%= user.position %></span></td>
+    <td><%= user.email %></td>
+    <td><%= user.cnic %></td>
+   
+  </tr>
+
+<%  }) %>
+            
+            
+            
+            </tbody>
+          </table>
+        </div>
       </div>
-      
-      <div class="table-container" style="width: 110%; max-width: 110%;">
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Position</th>
-              <th>Phone</th>
-              <th>Email</th>
-              <th>CNIC</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% for(let i = 0; i < 10; i++) { %>
-            <tr>
-              <td>Username</td>
-              <td><span class="badge badge-police">Police</span></td>
-              <td>03555-</td>
-              <td>someone@</td>
-              <td>71401-</td>
-              <td class="action-buttons">
-                <button class="btn-edit"><i class="fas fa-edit"></i></button>
-                <button class="btn-delete"><i class="fas fa-trash"></i></button>
-              </td>
-            </tr>
-            <% } %>
-          </tbody>
-        </table>
+      <div id="settings-section" style="display:none;">
+        <div class="content-header">
+          <h3>Admin Settings</h3>
+        </div>
+        <div class="settings-content">
+          <div class="table-container" style="width: 110%; max-width: 110%;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Position</th>
+                  
+                  <th>Email</th>
+                  <th>CNIC</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+               <form action="/delete-subadmin" method="post">
+                <% data.forEach((user)=>{ %>
+                  <tr>
+                    <td><%= user.fullname %></td>
+                    <td><span class="badge badge-police"><%= user.position %></span></td>
+                    <td><%= user.email %></td>
+                    <td><%= user.cnic %></td>
+                    <td class="action-buttons">
+                      
+                      <button class="btn-delete" name="deleteBtn" value="<%= user._id %>"><i class="fas fa-trash"></i></button>
+                    </td>
+                    
+                  </tr>
+                
+                <%  }) %>
+               </form>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -159,5 +199,23 @@
     color: white;
   }
   </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const adminsSection = document.getElementById('admins-section');
+      const settingsSection = document.getElementById('settings-section');
+      const showAdminsBtn = document.getElementById('show-admins');
+      const showSettingsBtn = document.getElementById('show-settings');
+      showAdminsBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        adminsSection.style.display = '';
+        settingsSection.style.display = 'none';
+      });
+      showSettingsBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        adminsSection.style.display = 'none';
+        settingsSection.style.display = '';
+      });
+    });
+  </script>
 </body>
 </html>

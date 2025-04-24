@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', function() {
     const imageForm = document.getElementById('profile-image-form');
     const imageUploadInput = document.getElementById('profile-image-upload');

@@ -222,7 +222,6 @@ app.post('/upload-profile-image', ensureAuthenticated, upload.single('profileIma
         });
     }
 });
-
 app.get("/", ensureAuthenticated, async function(req, res) {
     try {
         const uploads = await Upload.find();
@@ -560,7 +559,7 @@ app.post("/subadmin-form", function(req, res) {
             return res.status(500).send("Error registering SubAdmin");
         }
         passport.authenticate('subadmin-local')(req, res, function() {
-            res.redirect("/subadmin-dashboard");
+            res.redirect("/profile");
         });
     });
 });
@@ -607,12 +606,18 @@ res.render("subadmin-login")
 
 app.get("/admins",function(req,res){
     if(req.isAuthenticated()){
-        res.render("admin",{
-            isAuthenticated: true,
-            user: req.user,
-            title: "Admins",
-            path: "/admins"
-        });
+       
+        SubAdmin.find({})
+        .then((data)=>{
+            res.render("admin",{
+                isAuthenticated: true,
+                user: req.user,
+                title: "Admins",
+                path: "/admins",
+                data
+            });
+            console.log(data);
+        })
     }else{
         res.redirect("/login");
     }
@@ -689,6 +694,19 @@ app.get("/subadmin-touristData", ensureSubAdminAuthenticated, function(req, res)
     
 });
 
+
+app.post("/delete-subadmin",function(req,res){
+    const id = req.body.deleteBtn;
+    console.log(id);
+    SubAdmin.findByIdAndDelete(id)
+       .then(()=>{
+            res.redirect("/admins");
+        })
+       .catch((err)=>{
+            console.error("Error deleting subadmin:", err);
+            res.status(500).send("Error deleting subadmin");
+        });
+})
 
 // ERROR HANDLING
 app.use((err, req, res, next) => {
