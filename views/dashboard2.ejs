@@ -145,39 +145,40 @@
   <div class="sidebar">
     <%- include('subadmin-sidebar') -%>
   </div>
-  <div class="content">
+  <div class="content" style="margin: 0;">
     <div class="container-fluid">
       <div class="row">
+    
         <div class="col-md-12 p-4">
           <div class="d-flex justify-content-between align-items-center mb-4">
+         
             <span>Welcome, User</span>
           </div>
+  
+         <div class="home-panels">
           <div class="row mb-4">
             <div class="col-md-3">
               <div class="card-box text-center">
                 <p>Total Tourists this year</p>
-                <h4>1200+</h4>
+                <h4><%= userRegistrations%></h4>
               </div>
             </div>
             <div class="col-md-3">
               <div class="card-box text-center">
                 <p>International Tourists</p>
-                <h4>500</h4>
+                <h4><%= totalForeigners %></h4>
               </div>
             </div>
             <div class="col-md-3">
               <div class="card-box text-center">
                 <p>Local Tourists</p>
-                <h4>700</h4>
+                <h4><%= totalPassengers %></h4>
               </div>
             </div>
-            <div class="col-md-3">
-              <div class="card-box text-center">
-                <p>Active Tourists</p>
-                <h4>09</h4>
-              </div>
-            </div>
+         
           </div>
+         </div>
+  
           <div class="row mb-4">
             <div class="col-md-5">
               <div class="card-box">
@@ -194,6 +195,7 @@
                     <p class="mb-0" style="color:#ec4899">Female</p>
                     <strong style="color:#ec4899"><%= femaleCount %></strong>
                   </div>
+                 
                 </div>
               </div>
             </div>
@@ -206,6 +208,7 @@
               </div>
             </div>
           </div>
+  
           <div class="row">
             <div class="col-md-7">
               <div class="card-box">
@@ -251,9 +254,11 @@
               </div>
             </div>
           </div>
+  
         </div>
       </div>
     </div>
+  
   </div>
 
   <script>

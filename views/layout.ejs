@@ -134,12 +134,7 @@
     <div class="main-content <%= !isAuth || currentPath === '/login' ? 'no-sidebar' : '' %>">
         <div class="header">
             <h1><%= typeof title !== 'undefined' ? title : '' %></h1>
-            <% if (isAuth && currentPath !== '/login') { %> <!-- Also hide search on login -->
-            <div class="search-bar">
-                <i class="fas fa-search"></i>
-                <input type="text" placeholder="Search...">
-            </div>
-            <% } %>
+            
         </div>
         <%- body %> <!-- This renders the specific page content -->
     </div>

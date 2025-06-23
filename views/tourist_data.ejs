@@ -6,6 +6,7 @@
     <title>Tourist Data</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/tourist_data.css">
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         /* Camera modal styles */
         #cameraModal {
@@ -88,6 +89,73 @@
                 margin-left: 180px;
             }
         }
+
+        /* Foreign passenger fields visibility */
+        .number-foreign,
+        .number-foreign-females,
+        .number-foreign-males {
+            display: none;
+        }
+
+        .number-foreign.show,
+        .number-foreign-females.show,
+        .number-foreign-males.show {
+            display: block;
+        }
+
+        /* Table responsive styles */
+        .table-responsive-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        .section-2 {
+            margin-left: 250px;
+            width: calc(100% - 250px);
+            box-sizing: border-box;
+        }
+        @media (max-width: 768px) {
+            .section-2 {
+                margin-left: 180px;
+                width: calc(100% - 180px);
+            }
+        }
+        .previous-data-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px; /* Minimum width to prevent squishing */
+        }
+
+        .previous-data-table th,
+        .previous-data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            white-space: nowrap;
+        }
+
+        .previous-data-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+
+        .previous-data-table tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        /* Ensure main content doesn't overflow */
+        .main-content-with-subadmin {
+            padding: 20px;
+            width: calc(100% - 250px);
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 768px) {
+            .main-content-with-subadmin {
+                width: calc(100% - 180px);
+            }
+        }
     </style>
 </head>
 <body>
@@ -112,12 +180,22 @@
                 <label>Time</label>
                 <input type="text" name="orderTime" value="<%= new Date().toLocaleTimeString() %>" readonly required>
             </div>
+            <div class="order-time">
+                <label>Location</label>
+              <select name="location" id="location" required style="width: 100%; padding: 7px 10px; border: none; border-radius: 5px; background-color: #f0f0f0; color: #333; font-size: 16px; cursor: pointer;">
+                <option value="Karachi">Gilgit</option>
+                <option value="Lahore">Hunza</option>
+                <option value="Islamabad">Skardu</option>
+                <option value="Peshawar">Chalt</option>
+                <option value="Quetta">Ghizer</option>
+              </select>
+            </div>
             <div class="vehicle-number">
                 <label>Vehicle Number</label>
                 <input type="text" name="vehicleNumber" id="vehicleNumber" required>
             </div>
             <div class="vehicle-number">
-                <label>CNIC Number</label>
+                <label>CNIC Number <span style="font-size: 12px; color: #666;">(Without Dashes)</span></label>
                 <input type="text" name="cnic" id="cnicNumber" required>
             </div>
         </div>
@@ -127,7 +205,7 @@
             <div class="data-main">
                 <div class="personal-info-main">
                     <div class="profile-image">
-                        <label>Profile Image</label>
+                        <label>CNIC Image</label>
                         <div class="image-upload">
                             <div class="upload-container">
                                 <img src="/assets/images/Input.png" alt="Profile Preview" id="profilePreview">
@@ -148,18 +226,30 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Camera Modal -->
-                    <div id="cameraModal" class="modal">
-                        <div id="cameraContainer">
-                            <h3>Capture Image</h3>
-                            <video id="videoPreview" autoplay></video>
-                            <div id="cameraButtons">
-                                <button id="takePhotoBtn" onclick="takePhoto(event)">Capture</button>
-                                <button id="closeCameraBtn" onclick="closeCamera()">Close</button>
+                    <div class="vehicle-image">
+                        <label>Vehicle Image</label>
+                        <div class="image-upload">
+                            <div class="upload-container">
+                                <img src="/assets/images/Input.png" alt="Vehicle Preview" id="vehiclePreview">
+                                <input type="file" name="vehicleImage" id="vehicleInput" accept="image/*" capture="environment" onchange="previewImage(this, 'vehiclePreview')">
+                                <label for="vehicleInput" class="upload-label">Choose File</label>
+                                <button type="button" onclick="openCamera('vehicle')">Capture Image</button>
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Camera Modal -->
+                <div id="cameraModal" class="modal">
+                    <div id="cameraContainer">
+                        <h3>Capture Image</h3>
+                        <video id="videoPreview" autoplay></video>
+                        <div id="cameraButtons">
+                            <button id="takePhotoBtn" onclick="takePhoto(event)">Capture</button>
+                            <button id="closeCameraBtn" onclick="closeCamera()">Close</button>
+                        </div>
+                    </div>
+                </div>
 
                 
                 </div>
@@ -178,6 +268,18 @@
                             <label>Number of Males</label>
                             <input type="number" placeholder="Number of Male Passengers" name="males" required>
                         </div>
+                        <div class="number-foreign">
+                            <label>Total Foreign Passengers</label>
+                            <input type="number" placeholder="Number of Foreign Passengers" name="foreigners" value="0">
+                        </div>
+                        <div class="number-foreign-females">
+                            <label>Foreign Female Passengers</label>
+                            <input type="number" placeholder="Number of Foreign Female Passengers" name="foreignFemales" value="0">
+                        </div>
+                        <div class="number-foreign-males">
+                            <label>Foreign Male Passengers</label>
+                            <input type="number" placeholder="Number of Foreign Male Passengers" name="foreignMales" value="0">
+                        </div>
                     </div>
                     <div class="vehicle-info">
                         <div class="vehicle-passengers">
@@ -189,6 +291,11 @@
                             <h3>Vehicle with Goods</h3>
                             <input type="checkbox" class="checkbox" id="vehicleGoodsCheckbox">
                             <input type="hidden" name="vehicleGoods" id="vehicleGoodsHidden" value="no">
+                        </div>
+                        <div class="vehicle-foreign">
+                            <h3>Vehicle with Foreign Passengers</h3>
+                            <input type="checkbox" class="checkbox" id="vehicleForeignCheckbox">
+                            <input type="hidden" name="vehicleForeign" id="vehicleForeignHidden" value="no">
                         </div>
                         <div class="type-goods">
                             <label>Type of Goods</label>
@@ -313,18 +420,31 @@ vehicleNumberInput.addEventListener('input', function() {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             const dataUrl = canvas.toDataURL('image/png');
-            const preview = document.getElementById(currentCaptureTarget === 'profile' ? 'profilePreview' : 'licensePreview');
-            preview.src = dataUrl;
+            let preview, input;
+            if (currentCaptureTarget === 'profile') {
+                preview = document.getElementById('profilePreview');
+                input = document.getElementById('profileInput');
+            } else if (currentCaptureTarget === 'license') {
+                preview = document.getElementById('licensePreview');
+                input = document.getElementById('licenseInput');
+            } else if (currentCaptureTarget === 'vehicle') {
+                preview = document.getElementById('vehiclePreview');
+                input = document.getElementById('vehicleInput');
+            }
+            if (preview && input) {
+                preview.src = dataUrl;
+                const fileName = `captured-${Date.now()}.png`;
+                const blob = dataUrlToBlob(dataUrl);
+                const file = new File([blob], fileName, { type: 'image/png' });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                input.files = dataTransfer.files;
 
-            // Set the file input value (requires Blob conversion)
-            const input = currentCaptureTarget === 'profile' ? document.getElementById('profileInput') : document.getElementById('licenseInput');
-            const fileName = `captured-${Date.now()}.png`;
-            const blob = dataUrlToBlob(dataUrl);
-            const file = new File([blob], fileName, { type: 'image/png' });
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            input.files = dataTransfer.files;
-
+                // If this is the CNIC image, run OCR
+                if (currentCaptureTarget === 'profile') {
+                    handleCNICImage(input);
+                }
+            }
             closeCamera();
         }
 
@@ -363,5 +483,69 @@ vehicleNumberInput.addEventListener('input', function() {
         document.getElementById('vehicleGoodsCheckbox').addEventListener('change', function() {
             document.getElementById('vehicleGoodsHidden').value = this.checked ? 'yes' : 'no';
         });
+
+        document.getElementById('vehicleForeignCheckbox').addEventListener('change', function() {
+            document.getElementById('vehicleForeignHidden').value = this.checked ? 'yes' : 'no';
+            
+            // Toggle visibility of foreign passenger fields
+            const foreignFields = [
+                document.querySelector('.number-foreign'),
+                document.querySelector('.number-foreign-females'),
+                document.querySelector('.number-foreign-males')
+            ];
+            
+            foreignFields.forEach(field => {
+                if (this.checked) {
+                    field.classList.add('show');
+                } else {
+                    field.classList.remove('show');
+                    // Clear the input values when hiding
+                    const input = field.querySelector('input');
+                    if (input) input.value = '';
+                }
+            });
+        });
+
+        // CNIC OCR logic
+        document.getElementById('profileInput').addEventListener('change', function() {
+            handleCNICImage(this);
+        });
+
+        async function handleCNICImage(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+
+            // Show loading indicator (optional)
+            const cnicInput = document.getElementById('cnicNumber');
+            cnicInput.value = 'Detecting...';
+
+            // Read file as data URL
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                // Run OCR
+                const { data: { text } } = await Tesseract.recognize(
+                    e.target.result,
+                    'eng',
+                    {
+                        logger: m => {
+                            // Optionally show progress
+                            // console.log(m);
+                        }
+                    }
+                );
+                // Extract CNIC number using regex
+                // CNIC format: 5 digits - 7 digits - 1 digit (e.g., 12345-1234567-1)
+                const cnicRegex = /\b\d{5}-\d{7}-\d\b/;
+                const match = text.match(cnicRegex);
+                if (match) {
+                    // Remove dashes to get only digits
+                    cnicInput.value = match[0].replace(/-/g, '');
+                } else {
+                    cnicInput.value = '';
+                    alert('Could not detect a valid CNIC number. Please try again with a clearer image.');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
     </script>
 </html>

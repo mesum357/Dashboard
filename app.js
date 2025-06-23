@@ -10,6 +10,8 @@ const passport = require('passport');
 const findOrCreate = require('mongoose-findorcreate');
 const passportLocalMongoose = require('passport-local-mongoose');
 const mongoose = require('mongoose');
+
+// mongodb+srv://mesum357:pDliM118811@cluster0.h3knh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const multer = require('multer');
 const storage = multer.diskStorage({
@@ -157,13 +159,14 @@ const UploadSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    location: String,
     orderNo: String,
     time: String,
     vehicleNumber: String,
     passengers: String,
     females: Number,
     males: Number,
-    cnic: String,
+    cnic: Number,
     goods: String,
     profileImage: String,
     drivingLicenseImage: String,
@@ -176,7 +179,11 @@ const UploadSchema = new mongoose.Schema({
         type: String,
         enum: ['yes', 'no'],
         default: 'no'
-    }
+    },
+    vehicleImage: String,
+    foreigners: Number,
+    foreignFemales: Number,
+    foreignMales: Number,
 });
 
 UploadSchema.pre('save', async function(next) {
@@ -225,9 +232,14 @@ app.post('/upload-profile-image', ensureAuthenticated, upload.single('profileIma
 app.get("/", ensureAuthenticated, async function(req, res) {
     try {
         const uploads = await Upload.find();
-        const maleCount = uploads.reduce((total, upload) => total + (upload.males || 0), 0);
-        const femaleCount = uploads.reduce((total, upload) => total + (upload.females || 0), 0);
-        const userRegistrations = maleCount + femaleCount;
+        const maleCount = uploads.reduce((total, upload) => total + (upload.males || 0) + (upload.foreignMales || 0), 0);
+        const femaleCount = uploads.reduce((total, upload) => total + (upload.females || 0) + (upload.foreignFemales || 0), 0);
+
+        const totalPassengers = uploads.reduce((total, upload) => total + (parseInt(upload.passengers) || 0), 0);
+        const totalForeigners = uploads.reduce((total, upload) => total + (parseInt(upload.foreigners) || 0), 0);
+        const userRegistrations = uploads.reduce((total, upload) => total + (parseInt(upload.passengers) || 0) + (parseInt(upload.foreigners) || 0), 0);
+        const localTouristsArray = [0, ...uploads.map(upload => parseInt(totalPassengers) || 0)]
+        const foreignTouristsArray=  [0, ...uploads.map(upload => parseInt(totalForeigners) || 0)]
 
         res.render('index', {
             user: req.user,
@@ -237,8 +249,15 @@ app.get("/", ensureAuthenticated, async function(req, res) {
             tourists,
             maleCount,
             femaleCount,
-            userRegistrations
+            userRegistrations,
+            totalPassengers,
+            totalForeigners,
+            localTouristsArray,
+            foreignTouristsArray
+           
         });
+        console.log(localTouristsArray, foreignTouristsArray)
+       
     } catch (err) {
         console.error('Error fetching tourist data:', err);
         res.status(500).send('Error fetching tourist data');
@@ -336,14 +355,18 @@ app.get("/tourist-data", ensureAuthenticated, function(req, res) {
 
 app.post('/upload', upload.fields([
     { name: 'profileImage' },
-    { name: 'drivingLicenseImage' }
+    { name: 'drivingLicenseImage' },
+    { name: 'vehicleImage' }
 ]), async function(req, res) {
     try {
         const profileImage = req.files['profileImage'] ? req.files['profileImage'][0].path : null;
         const drivingLicenseImage = req.files['drivingLicenseImage'] ? req.files['drivingLicenseImage'][0].path : null;
+        const vehicleImage = req.files['vehicleImage'] ? req.files['vehicleImage'][0].path : null;
+
 
         const upload = new Upload({
             orderNo: req.body.orderDate,
+            location: req.body.location,
             time: req.body.orderTime,
             vehicleNumber: req.body.vehicleNumber,
             passengers: req.body.passengers,
@@ -353,8 +376,12 @@ app.post('/upload', upload.fields([
             cnic: req.body.cnic,
             profileImage,
             drivingLicenseImage,
+            vehicleImage,
             vehiclePassengers: req.body.vehiclePassengers || 'no',
-            vehicleGoods: req.body.vehicleGoods || 'no'
+            vehicleGoods: req.body.vehicleGoods || 'no',
+            foreigners: req.body.foreigners,
+            foreignFemales: req.body.foreignFemales,
+            foreignMales: req.body.foreignMales
         });
 
         await upload.save();
@@ -369,27 +396,31 @@ app.post('/upload', upload.fields([
        
     } catch (err) {
         console.error("Error saving upload data:", err);
-        res.status(500).send("Error saving upload data");
+       res.render("error");
     }
 });
 
 app.get("/latest-data", ensureAuthenticated, async function(req, res) {
     try {
-        const data = await Upload.find({})
-            .sort({ _id: -1 })
-            
-            
+        let query = {};
+        if (req.query.cnic && req.query.cnic.trim() !== "") {
+            // Use regex for partial match or direct match for exact
+            query.cnic = { $regex: req.query.cnic, $options: "i" };
+        }
+        const data = await Upload.find(query).sort({ srNo: -1 });
+        let value = req.user && req.user.role === 'subadmin' ? 2 : 1;
         res.render("latest-data", {
-            isAuthenticated: true,
-            user: req.user,
-            title: "Latest Data",
-            path: "/latest-data",
-            data,
-            value: 1
+            data: data,
+            value: value,
+            path: "/latest-data"
         });
     } catch (err) {
         console.error("Error fetching latest data:", err);
-        res.status(500).send("Error fetching data");
+        res.render("latest-data", {
+            data: [],
+            value: req.user && req.user.role === 'subadmin' ? 2 : 1,
+            path: "/latest-data"
+        });
     }
 });
 app.get("/subadmin-latestData", ensureSubAdminAuthenticated, async function(req,res){
@@ -414,10 +445,12 @@ app.get("/subadmin-latestData", ensureSubAdminAuthenticated, async function(req,
 
 app.get("/previous-data", ensureAuthenticated, async function(req, res) {
     try {
-        const data = await Upload.find({})
-            .sort({ _id: 1 })
-            
-            
+        let query = {};
+        if (req.query.cnic && req.query.cnic.trim() !== "") {
+            query.cnic = { $regex: req.query.cnic, $options: "i" };
+        }
+        const data = await Upload.find(query)
+            .sort({ _id: 1 });
         res.render("previous-data", {
             isAuthenticated: true,
             user: req.user,
@@ -573,27 +606,29 @@ app.post("/subadmin-login", passport.authenticate('subadmin-local', {
 app.get("/subadmin-dashboard", ensureSubAdminAuthenticated, async function(req, res) {
     try {
         const uploads = await Upload.find();
-        const maleCount = uploads.reduce((total, upload) => total + (upload.males || 0), 0);
-        const femaleCount = uploads.reduce((total, upload) => total + (upload.females || 0), 0);
-        const userRegistrations = maleCount + femaleCount;
-        const tourists = [
-            { name: "Samantha W.", country: "PKR", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
-            { name: "John D.", country: "USA", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
-            { name: "Samantha W.", country: "PKR", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
-            { name: "John D.", country: "USA", date: "31, Mar 2025", time: "04:34:45 AM", status: "Active" },
-        ];
+        const maleCount = uploads.reduce((total, upload) => total + (upload.males || 0) + (upload.foreignMales || 0), 0);
+        const femaleCount = uploads.reduce((total, upload) => total + (upload.females || 0) + (upload.foreignFemales || 0), 0);
+
+        const totalPassengers = uploads.reduce((total, upload) => total + (parseInt(upload.passengers) || 0), 0);
+        const totalForeigners = uploads.reduce((total, upload) => total + (parseInt(upload.foreigners) || 0), 0);
+        const userRegistrations = uploads.reduce((total, upload) => total + (parseInt(upload.passengers) || 0) + (parseInt(upload.foreigners) || 0), 0);
+        
+
         res.render('dashboard2', {
             user: req.user,
+            isAuthenticated: true,
             title: 'Dashboard',
-            path: req.path,
+            path: '/subadmin-dashboard',
+            tourists,
             maleCount,
             femaleCount,
             userRegistrations,
-            tourists
+            totalPassengers,
+            totalForeigners
         });
     } catch (err) {
-        console.error("Error fetching uploads:", err);
-        res.status(500).send("Error fetching uploads");
+        console.error('Error fetching tourist data:', err);
+        res.status(500).send('Error fetching tourist data');
     }
 });
 

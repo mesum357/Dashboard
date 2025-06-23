@@ -127,6 +127,7 @@
       content: "⋯";
       font-size: 18px;
     }
+ 
   </style>
 </head>
 <body>
@@ -139,32 +140,29 @@
           <span>Welcome, User</span>
         </div>
 
+       <div class="home-panels">
         <div class="row mb-4">
           <div class="col-md-3">
             <div class="card-box text-center">
               <p>Total Tourists this year</p>
-              <h4>1200+</h4>
+              <h4><%= userRegistrations%></h4>
             </div>
           </div>
           <div class="col-md-3">
             <div class="card-box text-center">
               <p>International Tourists</p>
-              <h4>500</h4>
+              <h4><%= totalForeigners %></h4>
             </div>
           </div>
           <div class="col-md-3">
             <div class="card-box text-center">
               <p>Local Tourists</p>
-              <h4>700</h4>
+              <h4><%= totalPassengers %></h4>
             </div>
           </div>
-          <div class="col-md-3">
-            <div class="card-box text-center">
-              <p>Active Tourists</p>
-              <h4>09</h4>
-            </div>
-          </div>
+       
         </div>
+       </div>
 
         <div class="row mb-4">
           <div class="col-md-5">
@@ -287,28 +285,54 @@ function generateData() {
   return data;
 }
 
+// Generate realistic fluctuating data
+function generateLocalData() {
+  return <%= JSON.stringify(localTouristsArray || []) %>;
+}
+function generateForeignData() {
+  return <%= JSON.stringify(foreignTouristsArray || []) %>;
+}
+
 new Chart(touristCtx, {
   type: 'line',
   data: {
-    labels: Array.from({ length: 30 }, (_, i) => {
+    labels: Array.from({ length: Math.max(generateLocalData().length, generateForeignData().length) }, (_, i) => {
       const date = new Date();
-      date.setDate(current_date + i);
+      
       return `${date.getDate()}/${date.getMonth() + 1}`;
     }),
-    datasets: [{
-      label: 'User Registrations',
-      data: generateData(),
-      borderColor: '#3b82f6',
-      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-      tension: 0.4,
-      fill: true,
-      pointRadius: 2,
-      borderWidth: 2,
-      pointHoverRadius: 5
-    }]
+    datasets: [
+      {
+        label: 'Local Tourists',
+        data: generateLocalData(),
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        tension: 0.4,
+        fill: true,
+        pointRadius: 2,
+        borderWidth: 2,
+        pointHoverRadius: 5
+      },
+      {
+        label: 'Foreign Tourists',
+        data: generateForeignData(),
+        borderColor: '#f59e42',
+        backgroundColor: 'rgba(245, 158, 66, 0.1)',
+        tension: 0.4,
+        fill: true,
+        pointRadius: 2,
+        borderWidth: 2,
+        pointHoverRadius: 5
+      }
+    ]
   },
   options: {
     responsive: true,
+    scales: {
+      y: {
+        beginAtZero: true
+      }
+    },
     plugins: {
       legend: {
         position: 'top',

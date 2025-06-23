@@ -159,9 +159,17 @@
             </div>
             <div class="info-images">
                 <div class="info-block">
-                    <span class="info-label">CNIC Image</span>
+                    <span class="info-label">Profile Image</span>
                     <% if(data.profileImage){ %>
                         <img src="/<%= data.profileImage.replace(/\\/g, '/') %>" alt="CNIC">
+                    <% } else { %>
+                        <p class="info-value">No image to show</p>
+                    <% } %>
+                </div>
+                <div class="info-block">
+                    <span class="info-label">CNIC Image</span>
+                    <% if(data.vehicleImage){ %>
+                        <img src="/<%= data.vehicleImage.replace(/\\/g, '/') %>" alt="CNIC">
                     <% } else { %>
                         <p class="info-value">No image to show</p>
                     <% } %>
@@ -177,11 +185,15 @@
             </div>
             <table class="info-table">
                 <tr>
-                    <td class="info-label">Order No</td>
+                    <td class="info-label">Location</td>
+                    <td class="info-value"><%= data.location %></td>
+                </tr>
+                <tr>
+                    <td class="info-label">Date</td>
                     <td class="info-value"><%= data.orderNo %></td>
                 </tr>
                 <tr>
-                    <td class="info-label">Order Time</td>
+                    <td class="info-label">Time</td>
                     <td class="info-value"><%= data.time %></td>
                 </tr>
                 <tr>
@@ -208,10 +220,29 @@
                     <td class="info-label">Females</td>
                     <td class="info-value"><%= data.females %></td>
                 </tr>
+                <% if (typeof data.foreigners !== 'undefined' && data.foreigners != 0) { %>
+                    <tr>
+                        <td class="info-label">Foreigner Passengers</td>
+                        <td class="info-value"><%= typeof data.foreigners !== 'undefined' ? data.foreigners : 'N/A' %></td>
+                    </tr>
+                    <% if (typeof data.foreignMales !== 'undefined') { %>
+                    <tr>
+                        <td class="info-label">Foreign Male Passengers</td>
+                        <td class="info-value"><%= data.foreignMales %></td>
+                    </tr>
+                    <% } %>
+                    <% if (typeof data.foreignFemales !== 'undefined') { %>
+                    <tr>
+                        <td class="info-label">Foreign Female Passengers</td>
+                        <td class="info-value"><%= data.foreignFemales %></td>
+                    </tr>
+                    <% } %>
+                <% } %>
                 <tr>
                     <td class="info-label">Goods</td>
                     <td class="info-value"><%= data.goods %></td>
                 </tr>
+        
             </table>
         </div>
     </div>

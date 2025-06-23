@@ -51,131 +51,94 @@
             font-weight: 500;
         }
 
-        .btn-send {
-            background-color: #B06C5D;
-            color: white;
-        }
+        .btn-send { background-color: #B06C5D; color: white; }
+        .btn-print { background-color: transparent; color: #B06C5D; border: 1px solid #B06C5D; }
+        .btn-export { background-color: #4CAF50; color: white; }
 
-        .btn-print {
-            background-color: transparent;
-            color: #B06C5D;
-            border: 1px solid #B06C5D;
-        }
+        .pagination { margin-top: 20px; display: flex; justify-content: center; gap: 5px; }
+        .pagination button { border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: 500; background-color: #f5f5f5; }
+        .pagination button.active { background-color: #B06C5D; color: white; }
 
-        .pagination {
-            margin-top: 20px;
-            display: flex;
-            justify-content: center;
-            gap: 5px;
-        }
-
-        .pagination button {
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: 500;
-            background-color: #f5f5f5;
-        }
-
-        .pagination button.active {
-            background-color: #B06C5D;
-            color: white;
-        }
+        .container { margin-left: 250px; max-width: calc(100vw - 250px); box-sizing: border-box; }
     </style>
+    <!-- SheetJS (xlsx) CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <% if (typeof value !== 'undefined') { %>
-    <% if (value === 1) { %>
-        <%- include('sidebar') -%>
-    <% } else if (value === 2) { %>
-        <%- include('subadmin-sidebar') -%>
-    <% } else { %>
-        <% console.error('Invalid value:', value) %>
+    <% if (value === 1) { %><%- include('sidebar') -%>
+    <% } else if (value === 2) { %><%- include('subadmin-sidebar') -%>
+        <style>.container{ margin-left: 0; }</style>
+    <% } else { %><% console.error('Invalid value:', value) %>
     <% } %>
-<% } else { %>
-    <% console.error('Value is undefined') %>
-<% } %>
+<% } else { %><% console.error('Value is undefined') %><% } %>
 <div class="container">
     <h3>Latest Data</h3>
-    <table class="latest-data-table">
+    <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+        <form id="search-form" method="get" action="/latest-data" style="display: flex; align-items: center; gap: 10px; margin: 0;">
+            <input type="text" id="cnic-search" name="cnic" value="<%= typeof req !== 'undefined' && req.query && req.query.cnic ? req.query.cnic : '' %>" placeholder="Search by CNIC" style="padding: 7px 12px; border-radius: 5px; border: 1px solid #ccc; width: 220px;">
+        </form>
+    </div>
+    <table class="latest-data-table" id="latest-data-table">
         <thead>
             <tr>
-                <th>SL No</th>
-                <th>CNIC</th>
-                <th>Driving License</th>
-                <th>Type of goods</th>
-                <th>No of Females</th>
-                <th>No of Males</th>
-                <th>Total Passengers</th>
-                
+                <th>SL No</th><th>Date</th><th>Time</th><th>CNIC</th><th>Total Passengers</th><th>Vehicle Number</th><th>Types of Goods</th>
             </tr>
         </thead>
         <tbody id="data-table-body">
-              <% if (typeof data !== 'undefined' && data.length > 0) { %>
-                        <% data.forEach((upload, index) => { %>
-                            <tr class="data-row" style="cursor: pointer;" onclick="window.location.href='/tourist_info/<%= upload.srNo %>'">
-                                <td><%= upload.srNo %></td>
-                                <td><%= upload.orderNo %></td>
-                                <td><%= upload.time %></td>
-                                <td><%= upload.vehicleNumber %></td>
-                                <td><%= upload.females || 0 %></td>
-                                <td><%= upload.males || 0 %></td>
-                                <td><%= upload.passengers || ((upload.males || 0) + (upload.females || 0)) %></td>
-                                <input type="hidden" name="no" value="<%= upload.srNo %>">
-                            </tr>
-                        <% }); %>
-                    <% } else { %>
-                        <tr>
-                            <td colspan="8" style="text-align: center; padding: 20px;">No previous data available.</td>
-                        </tr>
-                    <% } %>
+            <% if (data && data.length) { %>
+                <% data.forEach(upload => { %>
+                <tr class="data-row" onclick="window.location.href='/tourist_info/<%= upload.srNo %>'">
+                    <td><%= upload.srNo %></td><td><%= upload.orderNo %></td><td><%= upload.time %></td>
+                    <td><%= upload.cnic %></td><td><%= upload.passengers || ((upload.males||0)+(upload.females||0)) %></td>
+                    <td><%= upload.vehicleNumber||0 %></td><td><%= upload.goods||0 %></td>
+                </tr>
+                <% }); %>
+            <% } else { %>
+                <tr><td colspan="7" style="text-align:center;padding:20px;">No previous data available.</td></tr>
+            <% } %>
         </tbody>
     </table>
-
     <div class="pagination" id="pagination-controls"></div>
-
     <div class="action-buttons">
-        <button class="btn-send">Send Details</button>
-        <button class="btn-print" onclick="window.print()">Print Now</button>
+ 
+        <button class="btn-export" id="export-btn">Export to Excel</button>
     </div>
 </div>
-
 <script>
-    const rowsPerPage = 10; // Adjusted to a more reasonable number for testing
-    const dataRows = document.querySelectorAll('.data-row');
+document.addEventListener('DOMContentLoaded', () => {
+    const rowsPerPage = 10;
+    const dataRows = Array.from(document.querySelectorAll('.data-row'));
     const paginationControls = document.getElementById('pagination-controls');
     let currentPage = 1;
 
-    function displayPage(page) {
-        const start = (page - 1) * rowsPerPage;
-        const end = start + rowsPerPage;
-
-        dataRows.forEach((row, index) => {
-            row.style.display = (index >= start && index < end) ? '' : 'none';
-        });
-
-        updatePaginationControls(page);
+    function displayPage(page, rows = dataRows) {
+        rows.forEach(r => r.style.display = 'none');
+        const start = (page-1)*rowsPerPage;
+        rows.slice(start, start+rowsPerPage).forEach(r => r.style.display='');
+        updatePagination(page, rows.length);
     }
-
-    function updatePaginationControls(page) {
+    function updatePagination(page, total) {
         paginationControls.innerHTML = '';
-        const totalPages = Math.ceil(dataRows.length / rowsPerPage);
-
-        for (let i = 1; i <= totalPages; i++) {
-            const button = document.createElement('button');
-            button.textContent = i;
-            button.classList.toggle('active', i === page);
-            button.addEventListener('click', () => {
-                currentPage = i;
-                displayPage(i);
-            });
-            paginationControls.appendChild(button);
+        const pages = Math.ceil(total/rowsPerPage);
+        for(let i=1;i<=pages;i++){
+            const btn = document.createElement('button');
+            btn.textContent=i;
+            btn.classList.toggle('active',i===page);
+            btn.onclick = ()=>{ currentPage=i; displayPage(i); };
+            paginationControls.appendChild(btn);
         }
     }
-
     displayPage(currentPage);
-</script>
 
+    document.getElementById('export-btn').addEventListener('click', () => {
+        const table = document.getElementById('latest-data-table');
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.table_to_sheet(table);
+        XLSX.utils.book_append_sheet(wb, ws, 'LatestData');
+        XLSX.writeFile(wb, 'latest_data.xlsx');
+    });
+});
+</script>
 </body>
 </html>
