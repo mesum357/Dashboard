@@ -14,43 +14,37 @@
     <div class="settings-container">
         <div class="settings-card">
             <h2>Account Settings</h2>
-            <div class="settings-section">
+                        <div class="settings-section">
                 <h3>Profile Information</h3>
-                <form class="settings-form">
+                <div class="settings-form">
                     <div class="form-group">
-                        <label for="username">Username</label>
-                        <input type="text" id="username" value="<%= user.username %>" disabled>
+                        <label for="username">Email</label>
+                        <input type="text" id="username" value="<%= user.username %>" readonly>
                     </div>
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" value="<%= user.email || '' %>">
-                    </div>
-                    <button type="submit" class="save-button">Save Changes</button>
-                </form>
+                 
+                </div>
             </div>
 
             <div class="settings-section">
-                <h3>Security</h3>
-                <div class="security-options">
-                    <div class="security-item">
-                        <div class="security-info">
-                            <h4>Two-Factor Authentication</h4>
-                            <p>Add an extra layer of security to your account</p>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox">
-                            <span class="slider round"></span>
-                        </label>
+                <h3>Change Password</h3>
+                <form class="settings-form" id="passwordForm">
+                    <div class="form-group">
+                        <label for="currentPassword">Current Password</label>
+                        <input type="password" id="currentPassword" name="currentPassword" required>
                     </div>
-                    <div class="security-item">
-                        <div class="security-info">
-                            <h4>Password</h4>
-                            <p>Change your password</p>
-                        </div>
-                        <button class="change-password">Change Password</button>
+                    <div class="form-group">
+                        <label for="newPassword">New Password</label>
+                        <input type="password" id="newPassword" name="newPassword" required>
                     </div>
-                </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" required>
+                    </div>
+                    <button type="submit" class="save-button">Change Password</button>
+                </form>
             </div>
+
+
         </div>
     </div>
 
@@ -212,6 +206,309 @@
         .change-password:hover {
             background-color: #3a5bd9;
         }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 0;
+            border-radius: 10px;
+            width: 400px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .modal-header {
+            padding: 20px 25px 10px 25px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .modal-body {
+            padding: 20px 25px;
+        }
+
+        .modal-footer {
+            padding: 15px 25px 20px 25px;
+            text-align: right;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-message {
+            margin: 0;
+            color: #6c757d;
+            line-height: 1.5;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+
+        .success-icon {
+            color: #28a745;
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .error-icon {
+            color: #dc3545;
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .warning-icon {
+            color: #ffc107;
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal.show {
+            display: block;
+        }
     </style>
+
+    <!-- Modal HTML -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="modalTitle">Message</h4>
+            </div>
+            <div class="modal-body text-center">
+                <div id="modalIcon"></div>
+                <p class="modal-message" id="modalMessage">Message content</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Password form submission
+        document.getElementById('passwordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const currentPassword = formData.get('currentPassword');
+            const newPassword = formData.get('newPassword');
+            const confirmPassword = formData.get('confirmPassword');
+
+            console.log('Form submission:', {
+                hasCurrentPassword: !!currentPassword,
+                hasNewPassword: !!newPassword,
+                hasConfirmPassword: !!confirmPassword,
+                newPasswordLength: newPassword ? newPassword.length : 0
+            });
+
+            // Client-side validation
+            if (!currentPassword) {
+                showAlert('Current password is required!', 'warning');
+                return;
+            }
+
+            if (!newPassword) {
+                showAlert('New password is required!', 'warning');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showAlert('New passwords do not match!', 'warning');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showAlert('Password must be at least 6 characters long!', 'warning');
+                return;
+            }
+
+            const data = {
+                currentPassword: currentPassword,
+                newPassword: newPassword
+            };
+
+            console.log('Sending data to server:', {
+                hasCurrentPassword: !!data.currentPassword,
+                hasNewPassword: !!data.newPassword,
+                newPasswordLength: data.newPassword.length
+            });
+
+            try {
+                const response = await fetch('/settings/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                console.log('Response status:', response.status);
+                const result = await response.json();
+                console.log('Response result:', result);
+                
+                if (result.success) {
+                    showAlert('Password changed successfully!', 'success');
+                    this.reset(); // Clear the form
+                } else {
+                    showAlert(result.message || 'Failed to change password', 'error');
+                }
+            } catch (error) {
+                console.error('Error in password change:', error);
+                showAlert('An error occurred while changing password', 'error');
+            }
+        });
+
+        function showModal(title, message, type) {
+            const modal = document.getElementById('messageModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMessage = document.getElementById('modalMessage');
+            const modalIcon = document.getElementById('modalIcon');
+
+            // Set title and message
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+
+            // Set icon based on type
+            modalIcon.innerHTML = '';
+            let iconClass = '';
+            
+            switch(type) {
+                case 'success':
+                    iconClass = 'fas fa-check-circle success-icon';
+                    break;
+                case 'error':
+                    iconClass = 'fas fa-times-circle error-icon';
+                    break;
+                case 'warning':
+                    iconClass = 'fas fa-exclamation-triangle warning-icon';
+                    break;
+                default:
+                    iconClass = 'fas fa-info-circle';
+            }
+
+            const icon = document.createElement('i');
+            icon.className = iconClass;
+            modalIcon.appendChild(icon);
+
+            // Show modal
+            modal.classList.add('show');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('messageModal');
+            modal.classList.remove('show');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('messageModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Legacy function for backward compatibility
+        function showAlert(message, type) {
+            let title = 'Message';
+            switch(type) {
+                case 'success':
+                    title = 'Success';
+                    break;
+                case 'error':
+                    title = 'Error';
+                    break;
+                case 'warning':
+                    title = 'Warning';
+                    break;
+            }
+            showModal(title, message, type);
+        }
+    </script>
 </body>
 </html> 

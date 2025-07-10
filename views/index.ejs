@@ -37,11 +37,11 @@
     }
  
     .tourist-line-chart {
-      width: 800px;
-      height: 460px;
+      width: 100%;
+      height: 400px;
     }
     #line-chart {
-      height: 436px;
+      height: 460px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -82,22 +82,27 @@
       border-color: #06b6d4 transparent transparent transparent;
     }
     .name-column {
-      flex: 1;
+      flex: 1.2;
       font-weight: 500;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
     }
     .country-column {
-      flex: 0.5;
+      flex: 1;
       color: #6b7280;
+      font-size: 13px;
     }
     .date-column {
       flex: 1;
       text-align: center;
       color: #6b7280;
+      font-weight: 500;
     }
     .time-column {
       flex: 1;
       text-align: center;
       color: #6b7280;
+      font-size: 13px;
     }
     .status-column {
       flex: 0.5;
@@ -197,44 +202,46 @@
         <div class="row">
           <div class="col-md-7">
             <div class="card-box">
-              <h5>Active Tourists</h5>
+              <h5>Recent Vehicle Registrations</h5>
               <div class="tourist-list">
-                <% tourists.forEach(tourist => { %>
+                <% if (recentVehicles && recentVehicles.length > 0) { %>
+                  <% recentVehicles.forEach(vehicle => { %>
+                    <div class="tourist-row">
+                      <div class="icon-column">
+                        <div class="arrow-icon"></div>
+                      </div>
+                      <div class="name-column"><%= vehicle.vehicleNumber || 'N/A' %></div>
+                      <div class="country-column"><%= vehicle.location || 'N/A' %></div>
+                      <div class="date-column"><%= vehicle.passengers || 0 %> Passengers</div>
+                      <div class="time-column"><%= vehicle.time || 'N/A' %></div>
+                      
+                    </div>
+                  <% }); %>
+                <% } else { %>
                   <div class="tourist-row">
-                    <div class="icon-column">
-                      <div class="arrow-icon"></div>
-                    </div>
-                    <div class="name-column"><%= tourist.name %></div>
-                    <div class="country-column"><%= tourist.country %></div>
-                    <div class="date-column"><%= tourist.date %></div>
-                    <div class="time-column"><%= tourist.time %></div>
-                    <div class="status-column"><%= tourist.status %></div>
-                    <div class="actions-column">
-                      <div class="dots"></div>
-                    </div>
+                    <div class="text-center w-100 text-muted">No recent vehicle registrations</div>
                   </div>
-                <% }); %>
+                <% } %>
               </div>
             </div>
           </div>
           <div class="col-md-5">
             <div class="card-box">
-              <h5>Monthly Updates</h5>
-              <p>Active Tourists</p>
+              <h5>Vehicle Entry Statistics</h5>
+              <p>Daily Update</p>
               <div class="progress">
-                <div class="progress-bar bg-primary" style="width: 70%">05</div>
+                <div class="progress-bar bg-primary" style="width: <%= Math.min((dailyEntries / 20) * 100, 100) %>%"><%= dailyEntries %></div>
               </div>
-              <p class="mt-2">Resolved Cases</p>
+              <p class="mt-2">Weekly Update</p>
               <div class="progress">
-                <div class="progress-bar bg-purple" style="width: 60%">05</div>
+                <div class="progress-bar bg-success" style="width: <%= Math.min((weeklyEntries / 100) * 100, 100) %>%"><%= weeklyEntries %></div>
               </div>
-              <p class="mt-2">Tourist Complaints Received</p>
+              <p class="mt-2">Monthly Update</p>
               <div class="progress">
-                <div class="progress-bar bg-warning" style="width: 80%">05</div>
+                <div class="progress-bar bg-info" style="width: <%= Math.min((monthlyEntries / 400) * 100, 100) %>%"><%= monthlyEntries %></div>
               </div>
-              <p class="mt-2">Thread and Emergency</p>
-              <div class="progress">
-                <div class="progress-bar bg-danger" style="width: 40%">05</div>
+              <div class="mt-3 text-center">
+                <small class="text-muted">Progress bars show relative activity levels</small>
               </div>
             </div>
           </div>
@@ -272,109 +279,129 @@
         
       },
     });
-    const current_date = new Date().getDate();
-const current_month = new Date().getMonth() + 1;
+    // Get real monthly data from database
+    const monthlyData = JSON.parse('<%- monthlyData %>');
+    const currentMonth = new Date().getMonth();
+    
+    // Filter data to show only months up to current month
+    const filteredLabels = monthlyData.labels.slice(0, currentMonth + 1);
+    const filteredLocalData = monthlyData.localTourists.slice(0, currentMonth + 1);
+    const filteredForeignData = monthlyData.foreignTourists.slice(0, currentMonth + 1);
 
-// Generate realistic fluctuating data
-function generateData() {
-  let data = [];
-  let currentValue = <%= userRegistrations %>;
-
-    data.push(currentValue); // Ensure minimum of 5
-  
-  return data;
-}
-
-// Generate realistic fluctuating data
-function generateLocalData() {
-  return <%= JSON.stringify(localTouristsArray || []) %>;
-}
-function generateForeignData() {
-  return <%= JSON.stringify(foreignTouristsArray || []) %>;
-}
-
-new Chart(touristCtx, {
-  type: 'line',
-  data: {
-    labels: Array.from({ length: Math.max(generateLocalData().length, generateForeignData().length) }, (_, i) => {
-      const date = new Date();
-      
-      return `${date.getDate()}/${date.getMonth() + 1}`;
-    }),
-    datasets: [
-      {
-        label: 'Local Tourists',
-        data: generateLocalData(),
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        tension: 0.4,
-        fill: true,
-        pointRadius: 2,
-        borderWidth: 2,
-        pointHoverRadius: 5
+    new Chart(touristCtx, {
+      type: 'line',
+      data: {
+        labels: filteredLabels,
+        datasets: [
+          {
+            label: 'Local Tourists',
+            data: filteredLocalData,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 4,
+            borderWidth: 3,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#3b82f6',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2
+          },
+          {
+            label: 'Foreign Tourists',
+            data: filteredForeignData,
+            borderColor: '#f59e42',
+            backgroundColor: 'rgba(245, 158, 66, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 4,
+            borderWidth: 3,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#f59e42',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2
+          }
+        ]
       },
-      {
-        label: 'Foreign Tourists',
-        data: generateForeignData(),
-        borderColor: '#f59e42',
-        backgroundColor: 'rgba(245, 158, 66, 0.1)',
-        tension: 0.4,
-        fill: true,
-        pointRadius: 2,
-        borderWidth: 2,
-        pointHoverRadius: 5
-      }
-    ]
-  },
-  options: {
-    responsive: true,
-    scales: {
-      y: {
-        beginAtZero: true
-      }
-    },
-    plugins: {
-      legend: {
-        position: 'top',
-        labels: {
-          usePointStyle: true,
-          boxWidth: 10
-        }
-      },
-      tooltip: {
-        mode: 'index',
-        intersect: false
-      }
-    },
-    scales: {
-      x: {
-        grid: {
-          display: false
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              usePointStyle: true,
+              boxWidth: 12,
+              padding: 20,
+              font: {
+                size: 12,
+                weight: '500'
+              }
+            }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#3b82f6',
+            borderWidth: 1,
+            cornerRadius: 8,
+            displayColors: true
+          }
         },
-        ticks: {
-          autoSkip: true,
-          maxTicksLimit: 10
-        }
-      },
-      y: {
-        beginAtZero: false,
-        grid: {
-          color: 'rgba(200, 200, 200, 0.2)'
+        scales: {
+          x: {
+            grid: {
+              display: true,
+              color: 'rgba(200, 200, 200, 0.2)',
+              drawBorder: false
+            },
+            ticks: {
+              color: '#6b7280',
+              font: {
+                size: 11
+              }
+            },
+            border: {
+              display: false
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(200, 200, 200, 0.2)',
+              drawBorder: false
+            },
+            ticks: {
+              color: '#6b7280',
+              font: {
+                size: 11
+              },
+              callback: function(value) {
+                return value + ' tourists';
+              }
+            },
+            border: {
+              display: false
+            }
+          }
         },
-        ticks: {
-          callback: function(value) {
-            return value + ' users';
+        interaction: {
+          mode: 'nearest',
+          axis: 'x',
+          intersect: false
+        },
+        elements: {
+          point: {
+            hoverBackgroundColor: '#ffffff',
+            hoverBorderColor: '#3b82f6',
+            hoverBorderWidth: 3
           }
         }
       }
-    },
-    interaction: {
-      mode: 'nearest',
-      axis: 'x',
-      intersect: false
-    }
-  }
-});
+    });
     // Add event listeners to the dots for interactivity
     document.querySelectorAll('.dots').forEach(dots => {
       dots.addEventListener('click', function() {

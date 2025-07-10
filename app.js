@@ -35,6 +35,7 @@ const upload = multer({
 });
 
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
@@ -184,6 +185,10 @@ const UploadSchema = new mongoose.Schema({
     foreigners: Number,
     foreignFemales: Number,
     foreignMales: Number,
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
 });
 
 UploadSchema.pre('save', async function(next) {
@@ -238,8 +243,52 @@ app.get("/", ensureAuthenticated, async function(req, res) {
         const totalPassengers = uploads.reduce((total, upload) => total + (parseInt(upload.passengers) || 0), 0);
         const totalForeigners = uploads.reduce((total, upload) => total + (parseInt(upload.foreigners) || 0), 0);
         const userRegistrations = uploads.reduce((total, upload) => total + (parseInt(upload.passengers) || 0) + (parseInt(upload.foreigners) || 0), 0);
-        const localTouristsArray = [0, ...uploads.map(upload => parseInt(totalPassengers) || 0)]
-        const foreignTouristsArray=  [0, ...uploads.map(upload => parseInt(totalForeigners) || 0)]
+
+        // Aggregate data by month for the current year
+        const currentYear = new Date().getFullYear();
+        const monthlyData = {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            localTourists: new Array(12).fill(0),
+            foreignTourists: new Array(12).fill(0)
+        };
+
+        uploads.forEach(upload => {
+            const uploadDate = upload.createdAt || new Date();
+            const month = uploadDate.getMonth();
+            const year = uploadDate.getFullYear();
+            
+            if (year === currentYear) {
+                const localCount = parseInt(upload.passengers) || 0;
+                const foreignCount = parseInt(upload.foreigners) || 0;
+                
+                monthlyData.localTourists[month] += localCount;
+                monthlyData.foreignTourists[month] += foreignCount;
+            }
+        });
+
+        // Get recent vehicle registrations (last 5)
+        const recentVehicles = await Upload.find()
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .select('vehicleNumber passengers time createdAt location');
+
+        // Calculate vehicle entries per day, week, and month
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+
+        const dailyEntries = await Upload.countDocuments({
+            createdAt: { $gte: today }
+        });
+
+        const weeklyEntries = await Upload.countDocuments({
+            createdAt: { $gte: weekAgo }
+        });
+
+        const monthlyEntries = await Upload.countDocuments({
+            createdAt: { $gte: monthAgo }
+        });
 
         res.render('index', {
             user: req.user,
@@ -252,11 +301,12 @@ app.get("/", ensureAuthenticated, async function(req, res) {
             userRegistrations,
             totalPassengers,
             totalForeigners,
-            localTouristsArray,
-            foreignTouristsArray
-           
+            monthlyData: JSON.stringify(monthlyData),
+            recentVehicles,
+            dailyEntries,
+            weeklyEntries,
+            monthlyEntries
         });
-        console.log(localTouristsArray, foreignTouristsArray)
        
     } catch (err) {
         console.error('Error fetching tourist data:', err);
@@ -275,29 +325,33 @@ app.get("/login", function(req, res) {
     });
 });
 
-app.get("/register", function(req, res) {
-    if (req.isAuthenticated()) {
-        return res.redirect("/");
-    }
-    res.render("register", {
-        isAuthenticated: false,
-        title: "Register",
-        path: "/register"
-    });
-});
-
 app.post("/register", function(req, res) {
+    // Check if username and password are provided
+    if (!req.body.username || !req.body.password) {
+        return res.status(400).json({
+            success: false,
+            message: "Username and password are required"
+        });
+    }
+
     User.register({ username: req.body.username }, req.body.password, function(err, user) {
         if (err) {
             console.error(err);
-            return res.redirect("/register");
+            return res.status(400).json({
+                success: false,
+                message: "Registration failed",
+                error: err.message
+            });
         }
-        req.login(user, function(err) {
-            if (err) {
-                console.error(err);
-                return res.redirect("/register");
+        
+        // Don't auto-login for API usage, just return success
+        res.status(201).json({
+            success: true,
+            message: "User registered successfully",
+            user: {
+                id: user._id,
+                username: user.username
             }
-            res.redirect("/login");
         });
     });
 });
@@ -332,6 +386,112 @@ app.get("/settings", ensureAuthenticated, function(req, res) {
     });
 });
 
+
+
+// Change password
+app.post("/settings/change-password", ensureAuthenticated, async function(req, res) {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        
+        console.log('Password change request:', { 
+            userId: req.user._id, 
+            hasCurrentPassword: !!currentPassword, 
+            hasNewPassword: !!newPassword,
+            newPasswordLength: newPassword ? newPassword.length : 0
+        });
+        
+        // Validate input
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Current password and new password are required"
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must be at least 6 characters long"
+            });
+        }
+
+        // Find user and verify current password
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Verify current password using Passport-Local-Mongoose
+        try {
+            const isCurrentPasswordValid = await user.authenticate(currentPassword);
+            console.log('Password authentication result:', isCurrentPasswordValid);
+            
+            if (!isCurrentPasswordValid) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Current password is incorrect"
+                });
+            }
+        } catch (authError) {
+            console.error('Authentication error:', authError);
+            return res.status(400).json({
+                success: false,
+                message: "Current password is incorrect"
+            });
+        }
+
+        // Set new password using Passport-Local-Mongoose
+        await user.setPassword(newPassword);
+        await user.save();
+        
+        console.log('Password changed successfully for user:', user.username);
+
+        res.json({
+            success: true,
+            message: "Password changed successfully"
+        });
+    } catch (error) {
+        console.error('Error changing password:', error);
+        res.status(500).json({
+            success: false,
+            message: "An error occurred while changing password: " + error.message
+        });
+    }
+});
+
+// Test route to verify password change (for debugging)
+app.post("/settings/test-password", ensureAuthenticated, async function(req, res) {
+    try {
+        const { testPassword } = req.body;
+        const user = await User.findById(req.user._id);
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const isPasswordValid = await user.authenticate(testPassword);
+        
+        res.json({
+            success: true,
+            isPasswordValid: isPasswordValid,
+            username: user.username,
+            userId: user._id
+        });
+    } catch (error) {
+        console.error('Test password error:', error);
+        res.status(500).json({
+            success: false,
+            message: "Test failed: " + error.message
+        });
+    }
+});
+
 app.get("/tourist-data", ensureAuthenticated, function(req, res) {
     Upload.find({})
         .sort({ _id: -1 })
@@ -343,7 +503,9 @@ app.get("/tourist-data", ensureAuthenticated, function(req, res) {
                 title: "Tourist Data",
                 path: req.path,
                 data,
-                value : 1
+                value : 1,
+                region: req.user.region, // Pass region
+                isSubAdmin: !!req.user.region // True if subadmin
             });
 
         })
@@ -425,9 +587,12 @@ app.get("/latest-data", ensureAuthenticated, async function(req, res) {
 });
 app.get("/subadmin-latestData", ensureSubAdminAuthenticated, async function(req,res){
     try {
-        const data = await Upload.find({})
-            .sort({ _id: -1 })
-            
+        let query = {};
+        if (req.query.cnic && req.query.cnic.trim() !== "") {
+            query.cnic = { $regex: req.query.cnic, $options: "i" };
+        }
+        const data = await Upload.find(query)
+            .sort({ _id: -1 });
             
         res.render("latest-data", {
             isAuthenticated: true,
@@ -466,9 +631,12 @@ app.get("/previous-data", ensureAuthenticated, async function(req, res) {
 });
 app.get("/subadmin-previousData", ensureSubAdminAuthenticated, async function(req, res) {
     try {
-        const data = await Upload.find({})
-            .sort({ _id: 1 })
-            
+        let query = {};
+        if (req.query.cnic && req.query.cnic.trim() !== "") {
+            query.cnic = { $regex: req.query.cnic, $options: "i" };
+        }
+        const data = await Upload.find(query)
+            .sort({ _id: 1 });
             
         res.render("previous-data", {
             isAuthenticated: true,
@@ -504,7 +672,7 @@ app.get("/profile", ensureAuthenticated, async function(req, res) {
             user: req.user,
             title: "Profile",
             path: "/profile",
-            data
+            data: data || {}
         });
     } catch (err) {
         console.error("Error fetching profile:", err);
@@ -544,7 +712,8 @@ const SubAdminSchema = new mongoose.Schema({
     phoneNumber: String,
     email: String,
     cnic: String,
-    password: String // Add password field
+    password: String, // Add password field
+    region: String // Add region field
 });
 
 // Add Passport-Local Mongoose plugin to SubAdmin schema
@@ -585,7 +754,8 @@ app.post("/subadmin-form", function(req, res) {
         position: req.body.position,
         phoneNumber: req.body.phoneNumber,
         email: req.body.email,
-        cnic: req.body.cnic
+        cnic: req.body.cnic,
+        region: req.body.region // Save region
     }), req.body.password, function(err, subAdmin) {
         if (err) {
             console.error("Error registering SubAdmin:", err);
@@ -612,9 +782,54 @@ app.get("/subadmin-dashboard", ensureSubAdminAuthenticated, async function(req, 
         const totalPassengers = uploads.reduce((total, upload) => total + (parseInt(upload.passengers) || 0), 0);
         const totalForeigners = uploads.reduce((total, upload) => total + (parseInt(upload.foreigners) || 0), 0);
         const userRegistrations = uploads.reduce((total, upload) => total + (parseInt(upload.passengers) || 0) + (parseInt(upload.foreigners) || 0), 0);
-        
 
-        res.render('dashboard2', {
+        // Aggregate data by month for the current year
+        const currentYear = new Date().getFullYear();
+        const monthlyData = {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            localTourists: new Array(12).fill(0),
+            foreignTourists: new Array(12).fill(0)
+        };
+
+        uploads.forEach(upload => {
+            const uploadDate = upload.createdAt || new Date();
+            const month = uploadDate.getMonth();
+            const year = uploadDate.getFullYear();
+            
+            if (year === currentYear) {
+                const localCount = parseInt(upload.passengers) || 0;
+                const foreignCount = parseInt(upload.foreigners) || 0;
+                
+                monthlyData.localTourists[month] += localCount;
+                monthlyData.foreignTourists[month] += foreignCount;
+            }
+        });
+
+        // Get recent vehicle registrations (last 5)
+        const recentVehicles = await Upload.find()
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .select('vehicleNumber passengers time createdAt location');
+
+        // Calculate vehicle entries per day, week, and month
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+
+        const dailyEntries = await Upload.countDocuments({
+            createdAt: { $gte: today }
+        });
+
+        const weeklyEntries = await Upload.countDocuments({
+            createdAt: { $gte: weekAgo }
+        });
+
+        const monthlyEntries = await Upload.countDocuments({
+            createdAt: { $gte: monthAgo }
+        });
+
+        res.render('index', {
             user: req.user,
             isAuthenticated: true,
             title: 'Dashboard',
@@ -624,7 +839,13 @@ app.get("/subadmin-dashboard", ensureSubAdminAuthenticated, async function(req, 
             femaleCount,
             userRegistrations,
             totalPassengers,
-            totalForeigners
+            totalForeigners,
+            monthlyData: JSON.stringify(monthlyData),
+            recentVehicles,
+            dailyEntries,
+            weeklyEntries,
+            monthlyEntries,
+            isSubAdmin: true // Flag to indicate this is subadmin view
         });
     } catch (err) {
         console.error('Error fetching tourist data:', err);
@@ -709,24 +930,24 @@ app.get("/tourists/:topic", ensureSubAdminAuthenticated, function(req,res){
 
 app.get("/subadmin-touristData", ensureSubAdminAuthenticated, function(req, res) {
     Upload.find({})
-    .sort({ _id: -1 })
-    .limit(10)
-    .then((data) => {
-        res.render("tourist_data", {
-            isAuthenticated: true,
-            user: req.user,
-            title: "Tourist Data",
-            path: req.path,
-            data,
-            value : 2
+        .sort({ _id: -1 })
+        .limit(10)
+        .then((data) => {
+            res.render("tourist_data", {
+                isAuthenticated: true,
+                user: req.user,
+                title: "Tourist Data",
+                path: req.path,
+                data,
+                value: 2,
+                region: req.user.region, // Pass region
+                isSubAdmin: !!req.user.region // True if subadmin
+            });
+        })
+        .catch((err) => {
+            console.error("Error fetching tourist data:", err);
+            res.status(500).send("Error fetching tourist data");
         });
-
-    })
-    .catch((err) => {
-        console.error("Error fetching tourist data:", err);
-        res.status(500).send("Error fetching tourist data");
-    });
-    
 });
 
 

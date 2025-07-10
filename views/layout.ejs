@@ -127,8 +127,12 @@
     <% const currentPath = typeof path !== 'undefined' ? path : ''; %>
 
     <% if (isAuth && currentPath !== '/login') { %>
-        <!-- Include the sidebar partial -->
-        <%- include('./sidebar.ejs', { path: currentPath }) %>
+        <!-- Include the appropriate sidebar based on user type -->
+        <% if (typeof isSubAdmin !== 'undefined' && isSubAdmin) { %>
+            <%- include('./subadmin-sidebar.ejs', { path: currentPath }) %>
+        <% } else { %>
+            <%- include('./sidebar.ejs', { path: currentPath }) %>
+        <% } %>
     <% } %>
 
     <div class="main-content <%= !isAuth || currentPath === '/login' ? 'no-sidebar' : '' %>">

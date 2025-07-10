@@ -84,7 +84,7 @@
 <div class="container">
     <h3>Latest Data</h3>
     <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-        <form id="search-form" method="get" action="/latest-data" style="display: flex; align-items: center; gap: 10px; margin: 0;">
+        <form id="search-form" method="get" action="<%= value === 1 ? '/previous-data' : '/subadmin-previousData' %>" style="display: flex; align-items: center; gap: 10px; margin: 0;">
             <input type="text" id="cnic-search" name="cnic" value="<%= typeof req !== 'undefined' && req.query && req.query.cnic ? req.query.cnic : '' %>" placeholder="Search by CNIC" style="padding: 7px 12px; border-radius: 5px; border: 1px solid #ccc; width: 220px;">
         </form>
     </div>
@@ -103,7 +103,7 @@
         <tbody id="data-table-body">
             <% if (typeof data !== 'undefined' && data.length > 0) { %>
                 <% data.forEach((upload) => { %>
-                    <tr class="data-row" onclick="window.location.href='/tourist_info/<%= upload.srNo %>'">
+                    <tr class="data-row" onclick="window.location.href='<%= value === 1 ? `/tourist_info/${upload.srNo}` : `/tourists/${upload.srNo}` %>'">
                         <td><%= upload.srNo %></td>
                         <td><%= upload.orderNo %></td>
                         <td><%= upload.time %></td>

@@ -85,9 +85,6 @@
             .subadmin-sidebar {
                 width: 180px;
             }
-            .main-content-with-subadmin {
-                margin-left: 180px;
-            }
         }
 
         /* Foreign passenger fields visibility */
@@ -110,17 +107,13 @@
             margin-top: 20px;
         }
 
+        /* Fix for subadmin view - section-2 should not have extra margin */
         .section-2 {
-            margin-left: 250px;
-            width: calc(100% - 250px);
+            width: 100%;
             box-sizing: border-box;
+            padding: 20px;
         }
-        @media (max-width: 768px) {
-            .section-2 {
-                margin-left: 180px;
-                width: calc(100% - 180px);
-            }
-        }
+
         .previous-data-table {
             width: 100%;
             border-collapse: collapse;
@@ -161,6 +154,11 @@
 <body>
 <% if (value === 1) { %>
     <%- include('sidebar') %>
+    <style>
+        .section-2{
+            margin-left: 250px;
+        }
+    </style>
 <% } else if (value === 2) { %>
     <div class="subadmin-sidebar">
         <%- include('subadmin-sidebar') %>
@@ -182,13 +180,17 @@
             </div>
             <div class="order-time">
                 <label>Location</label>
-              <select name="location" id="location" required style="width: 100%; padding: 7px 10px; border: none; border-radius: 5px; background-color: #f0f0f0; color: #333; font-size: 16px; cursor: pointer;">
-                <option value="Karachi">Gilgit</option>
-                <option value="Lahore">Hunza</option>
-                <option value="Islamabad">Skardu</option>
-                <option value="Peshawar">Chalt</option>
-                <option value="Quetta">Ghizer</option>
-              </select>
+                <% if (typeof isSubAdmin !== 'undefined' && isSubAdmin) { %>
+                  <input type="text" name="location" id="location" value="<%= region %>" readonly style="width: 100%; padding: 7px 10px; border: none; border-radius: 5px; background-color: #f0f0f0; color: #333; font-size: 16px; cursor: not-allowed;">
+                <% } else { %>
+                  <select name="location" id="location" required style="width: 100%; padding: 7px 10px; border: none; border-radius: 5px; background-color: #f0f0f0; color: #333; font-size: 16px; cursor: pointer;">
+                    <option value="Karachi">Gilgit</option>
+                    <option value="Lahore">Hunza</option>
+                    <option value="Islamabad">Skardu</option>
+                    <option value="Peshawar">Chalt</option>
+                    <option value="Quetta">Ghizer</option>
+                  </select>
+                <% } %>
             </div>
             <div class="vehicle-number">
                 <label>Vehicle Number</label>
@@ -354,10 +356,6 @@
             </table>
         </div>
 
-        <div class="action-buttons">
-            <button class="btn-send">Send Details</button>
-            <button class="btn-print" onclick="window.print()">Print Now</button>
-        </div>
     </div>
 </body>
     <!-- Keep the previewImage function -->

@@ -196,8 +196,8 @@
                 <span>Dashboard</span>
             </a>
             <a href="/subadmin-touristData" class="menu-item <%= path === '/subadmin-touristData' ? 'active' : '' %>">
-                <i class="fas fa-user"></i>
-                <span>Home</span>
+                <i class="fas fa-plus-circle"></i>
+                <span>Entry</span>
             </a>
     
             <!-- Start Dropdown Menu -->
@@ -212,9 +212,11 @@
                      <!-- Added Tourist Data back into the dropdown -->
                      
                     <a href="/subadmin-latestData" class="menu-item submenu-item <%= path === '/latest-data' ? 'active' : '' %>">
+                        <i class="fas fa-clock"></i>
                         <span>Latest Data</span>
                     </a>
                     <a href="/subadmin-previousData" class="menu-item submenu-item <%= path === '/previous-data' ? 'active' : '' %>">
+                        <i class="fas fa-history"></i>
                         <span>Previous Data</span>
                     </a>
                 </div>

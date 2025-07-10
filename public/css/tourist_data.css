@@ -215,7 +215,7 @@ body {
     padding: 20px;
     border-radius: 10px;
     margin-bottom: 20px;
-    margin-left: 250px; /* Add margin to match sidebar width */
+    /* Remove margin-left as it's now handled by the container */
 }
 
 /* UPLOAD IMAGE */
