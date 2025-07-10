@@ -394,7 +394,8 @@ vehicleNumberInput.addEventListener('input', function() {
                 cameraStream.getTracks().forEach(track => track.stop());
             }
 
-            navigator.mediaDevices.getUserMedia({ video: true })
+            // Request the environment (back) camera if available
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } })
                 .then(stream => {
                     cameraStream = stream;
                     const video = document.getElementById('videoPreview');
@@ -402,8 +403,18 @@ vehicleNumberInput.addEventListener('input', function() {
                     video.play();
                 })
                 .catch(error => {
-                    console.error('Error accessing camera:', error);
-                    alert('Unable to access camera. Please allow camera permissions.');
+                    // If the environment camera is not available, fallback to any camera
+                    navigator.mediaDevices.getUserMedia({ video: true })
+                        .then(stream => {
+                            cameraStream = stream;
+                            const video = document.getElementById('videoPreview');
+                            video.srcObject = stream;
+                            video.play();
+                        })
+                        .catch(error => {
+                            console.error('Error accessing camera:', error);
+                            alert('Unable to access camera. Please allow camera permissions.');
+                        });
                 });
         }
 
