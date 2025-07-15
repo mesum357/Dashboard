@@ -964,6 +964,20 @@ app.post("/delete-subadmin",function(req,res){
         });
 })
 
+// API endpoint to delete a registered user by ID
+app.delete('/api/delete-superadmin/:id', async (req, res) => {
+    try {
+        const user = await User.findByIdAndDelete(req.params.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        res.json({ success: true, message: 'User deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting user:', err);
+        res.status(500).json({ success: false, message: 'Error deleting user' });
+    }
+});
+
 // ERROR HANDLING
 app.use((err, req, res, next) => {
     console.error(err.stack);

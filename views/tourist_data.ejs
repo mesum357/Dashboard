@@ -199,6 +199,10 @@
             <div class="vehicle-number">
                 <label>CNIC Number <span style="font-size: 12px; color: #666;">(Without Dashes)</span></label>
                 <input type="text" name="cnic" id="cnicNumber" required>
+                <div id="cnic-message" style="margin-top: 8px; min-height: 24px;"></div>
+                <div id="cnic-spinner" style="display:none; margin-top: 8px;">
+                  <i class="fas fa-spinner fa-spin"></i> Detecting CNIC...
+                </div>
             </div>
         </div>
 
@@ -522,39 +526,73 @@ vehicleNumberInput.addEventListener('input', function() {
 
         async function handleCNICImage(input) {
             const file = input.files && input.files[0];
+            const messageDiv = document.getElementById('cnic-message');
+            const spinner = document.getElementById('cnic-spinner');
+            const cnicInput = document.getElementById('cnicNumber');
             if (!file) return;
 
-            // Show loading indicator (optional)
-            const cnicInput = document.getElementById('cnicNumber');
-            cnicInput.value = 'Detecting...';
+            spinner.style.display = 'block';
+            messageDiv.textContent = '';
+            messageDiv.style.color = '';
+            spinner.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting CNIC... 0%';
 
-            // Read file as data URL
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                // Run OCR
-                const { data: { text } } = await Tesseract.recognize(
-                    e.target.result,
-                    'eng',
-                    {
-                        logger: m => {
-                            // Optionally show progress
-                            // console.log(m);
+            // Preprocess image for better OCR
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            img.onload = async function() {
+                // Resize to max 500px width for better accuracy
+                const canvas = document.createElement('canvas');
+                const scale = Math.min(1, 500 / img.width);
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // Convert to grayscale and apply thresholding
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < imageData.data.length; i += 4) {
+                    // Grayscale
+                    const avg = (imageData.data[i] + imageData.data[i+1] + imageData.data[i+2]) / 3;
+                    // Threshold
+                    const value = avg > 128 ? 255 : 0;
+                    imageData.data[i] = imageData.data[i+1] = imageData.data[i+2] = value;
+                }
+                ctx.putImageData(imageData, 0, 0);
+
+                try {
+                    const { data: { text } } = await Tesseract.recognize(
+                        canvas,
+                        'eng',
+                        {
+                            logger: m => {
+                                if (m.status === 'recognizing text' && m.progress) {
+                                    spinner.innerHTML = `<i class=\"fas fa-spinner fa-spin\"></i> Detecting CNIC... ${Math.round(m.progress * 100)}%`;
+                                }
+                            },
+                            tessedit_char_whitelist: '0123456789-'
                         }
+                    );
+                    // CNIC format: 5 digits - 7 digits - 1 digit (e.g., 12345-1234567-1)
+                    const cnicRegex = /\b\d{5}-\d{7}-\d\b/;
+                    const match = text.match(cnicRegex);
+                    if (match) {
+                        cnicInput.value = match[0].replace(/-/g, '');
+                        messageDiv.textContent = 'CNIC detected successfully!';
+                        messageDiv.style.color = 'green';
+                    } else {
+                        cnicInput.value = '';
+                        messageDiv.textContent = 'Could not detect a valid CNIC number. Please try again with a clearer image.';
+                        messageDiv.style.color = 'red';
                     }
-                );
-                // Extract CNIC number using regex
-                // CNIC format: 5 digits - 7 digits - 1 digit (e.g., 12345-1234567-1)
-                const cnicRegex = /\b\d{5}-\d{7}-\d\b/;
-                const match = text.match(cnicRegex);
-                if (match) {
-                    // Remove dashes to get only digits
-                    cnicInput.value = match[0].replace(/-/g, '');
-                } else {
+                } catch (err) {
                     cnicInput.value = '';
-                    alert('Could not detect a valid CNIC number. Please try again with a clearer image.');
+                    messageDiv.textContent = 'Error during OCR. Please try again.';
+                    messageDiv.style.color = 'red';
+                } finally {
+                    spinner.style.display = 'none';
+                    setTimeout(() => { messageDiv.textContent = ''; }, 5000);
                 }
             };
-            reader.readAsDataURL(file);
         }
     </script>
 </html>
