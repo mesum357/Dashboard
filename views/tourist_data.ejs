@@ -149,6 +149,29 @@
                 width: calc(100% - 180px);
             }
         }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        #ocrStatus {
+            max-width: 90vw;
+            min-width: 180px;
+            font-size: 1rem;
+            word-break: break-word;
+        }
+        @media (max-width: 600px) {
+            #ocrStatus {
+                top: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90vw;
+                min-width: 0;
+                font-size: 0.95rem;
+                padding: 8px 4px;
+            }
+            #ocrLoader span {
+                width: 22px !important;
+                height: 22px !important;
+                border-width: 3px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -159,9 +182,6 @@
         </div>
         <div id="ocrMessage" style="display:none; font-weight:500;"></div>
     </div>
-    <style>
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-    </style>
 <% if (value === 1) { %>
     <%- include('sidebar') %>
     <style>
