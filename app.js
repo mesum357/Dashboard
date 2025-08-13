@@ -214,13 +214,11 @@ app.post('/upload-profile-image', ensureAuthenticated, upload.single('profileIma
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
-        const admin = await Admin.findOne({});
-        if (!admin) {
-            return res.status(404).json({ success: false, message: 'Admin profile not found' });
-        }
-
-        admin.profileImage = req.file.path;
-        await admin.save();
+        const updatedAdmin = await Admin.findOneAndUpdate(
+            {},
+            { profileImage: req.file.path },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
 
         res.json({
             success: true,
