@@ -6,7 +6,6 @@
     <title>Tourist Data</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/tourist_data.css">
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         /* Camera modal styles */
         #cameraModal {
@@ -52,6 +51,24 @@
             border-radius: 10px;
             background: #000;
             object-fit: contain;
+        }
+        #detectionOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        #cameraInfo {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            font-size: 12px;
+            line-height: 1;
+            z-index: 3;
         }
 
         #cameraButtons {
@@ -212,13 +229,7 @@
     </style>
 </head>
 <body>
-    <!-- OCR Loader and Message UI -->
-    <div id="ocrStatus" style="display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:2000; min-width:220px; text-align:center;">
-        <div id="ocrLoader" style="display:none; margin-bottom:8px;">
-            <span style="display:inline-block; width:28px; height:28px; border:4px solid #3b82f6; border-top:4px solid #e5e7eb; border-radius:50%; animation:spin 1s linear infinite;"></span>
-        </div>
-        <div id="ocrMessage" style="display:none; font-weight:500;"></div>
-    </div>
+    
 <% if (value === 1) { %>
     <%- include('sidebar') %>
     <style>
@@ -266,6 +277,7 @@
             <div class="vehicle-number">
                 <label>CNIC Number <span style="font-size: 12px; color: #666;">(Without Dashes)</span></label>
                 <input type="text" name="cnic" id="cnicNumber" required>
+                <div id="ocrStatus"></div>
             </div>
         </div>
 
@@ -278,7 +290,7 @@
                         <div class="image-upload">
                             <div class="upload-container">
                                 <img src="/assets/images/Input.png" alt="Profile Preview" id="profilePreview">
-                                <input type="file" name="profileImage" id="profileInput" accept="image/*" capture="environment" onchange="previewImage(this, 'profilePreview')">
+                                <input type="file" name="profileImage" id="profileInput" accept="image/*" capture="environment" onchange="previewImage(this, 'profilePreview');">
                                 <label for="profileInput" class="upload-label">Choose File</label>
                                 <button type="button" onclick="openCamera('profile')">Capture Image</button>
                             </div>
@@ -313,9 +325,11 @@
                     <div id="cameraContainer">
                         <h3>Capture Image</h3>
                         <video id="videoPreview" autoplay></video>
+                        <canvas id="detectionOverlay"></canvas>
+                        <div id="cameraInfo"></div>
                         <div id="cameraButtons">
-                            <button id="takePhotoBtn" onclick="takePhoto(event)">Capture</button>
-                            <button id="closeCameraBtn" onclick="closeCamera()">Close</button>
+                            <button type="button" id="takePhotoBtn" onclick="takePhoto(event)">Capture</button>
+                            <button type="button" id="closeCameraBtn" onclick="closeCamera()">Close</button>
                         </div>
                     </div>
                 </div>
@@ -383,6 +397,9 @@
         </div>
     </form>
 
+    <!-- Load Tesseract.js for client-side OCR -->
+    <script src="https://unpkg.com/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
+
     <!-- SECTION 2 -->
     <div class="section-2">
         <h3>Previous Data</h3>
@@ -424,9 +441,38 @@
         </div>
 
     </div>
-</body>
-    <!-- Keep the previewImage function -->
+    <!-- Reset OCR scripts -->
     <script>
+        // Configurable CNIC regex (Pakistan format #####-#######-#). Allow optional spaces/hyphens in OCR text
+        window.CNIC_REGEX = /(\d{5})[-\s]?(\d{7})[-\s]?(\d)/;
+        // Enable verbose OCR debugging in console
+        window.OCR_DEBUG = true;
+
+        // Tesseract worker and base params
+        let ocrWorker = null;
+        const baseOcrParams = {
+            tessedit_char_whitelist: '0123456789- ',
+            tessedit_pageseg_mode: '7', // Treat image as a single text line
+            preserve_interword_spaces: '1',
+            user_defined_dpi: '300'
+        };
+        async function ensureOcrWorker() {
+            if (ocrWorker) return ocrWorker;
+            const status = document.getElementById('ocrStatus');
+            try {
+                if (status) { status.style.color = '#333'; status.textContent = 'Loading OCR...'; }
+                const t0 = performance.now();
+                ocrWorker = await Tesseract.createWorker('eng');
+                await ocrWorker.setParameters(baseOcrParams);
+                const t1 = performance.now();
+                debugLog('OCR worker ready', { durationMs: Math.round(t1 - t0) });
+                if (status) { status.style.color = '#228b22'; status.textContent = 'OCR ready'; }
+            } catch (e) {
+                console.error(e);
+                if (status) { status.style.color = '#ef4444'; status.textContent = 'Failed to load OCR'; }
+            }
+            return ocrWorker;
+        }
 const vehicleNumberInput = document.getElementById('vehicleNumber');
 vehicleNumberInput.addEventListener('input', function() {
     this.value = this.value.toUpperCase();
@@ -456,39 +502,70 @@ vehicleNumberInput.addEventListener('input', function() {
             startCamera();
         }
 
-        function startCamera() {
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(track => track.stop());
-            }
+        async function startCamera() {
+            try {
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                }
 
-            // Request the environment (back) camera if available
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } })
-                .then(stream => {
-                    cameraStream = stream;
-                    const video = document.getElementById('videoPreview');
-                    video.srcObject = stream;
-                    video.play();
-                })
-                .catch(error => {
-                    // If the environment camera is not available, fallback to any camera
-                    navigator.mediaDevices.getUserMedia({ video: true })
-                        .then(stream => {
-                            cameraStream = stream;
-                            const video = document.getElementById('videoPreview');
-                            video.srcObject = stream;
-                            video.play();
-                        })
-                        .catch(error => {
-                            console.error('Error accessing camera:', error);
-                            alert('Unable to access camera. Please allow camera permissions.');
-                        });
-                });
+                const stream = await getHighResStream();
+                cameraStream = stream;
+                const video = document.getElementById('videoPreview');
+                video.srcObject = stream;
+                await video.play();
+
+                // Attempt to upgrade the existing track resolution further
+                try { await upgradeTrackResolution(stream); } catch (_) {}
+
+                setupDetectionOverlay();
+                updateCameraInfo();
+                requestAnimationFrame(detectLoop);
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                alert('Unable to access camera. Please allow camera permissions.');
+            }
+        }
+
+        async function getHighResStream() {
+            const presets = [
+                { width: { exact: 2560 }, height: { exact: 1440 }, frameRate: { ideal: 30 } },
+                { width: { ideal: 2560 }, height: { ideal: 1440 }, frameRate: { ideal: 30 } },
+                { width: { exact: 1920 }, height: { exact: 1080 }, frameRate: { ideal: 30 } },
+                { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
+                { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
+            ];
+            for (const p of presets) {
+                const constraints = { video: { ...p, facingMode: { ideal: 'environment' } } };
+                try {
+                    return await navigator.mediaDevices.getUserMedia(constraints);
+                } catch (_) { /* try next */ }
+            }
+            // Fallback to any camera
+            return await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+
+        async function upgradeTrackResolution(stream) {
+            const track = stream.getVideoTracks && stream.getVideoTracks()[0];
+            if (!track || !track.applyConstraints) return;
+            const attempts = [
+                { width: 2560, height: 1440 },
+                { width: 1920, height: 1080 },
+                { width: 1280, height: 720 }
+            ];
+            for (const a of attempts) {
+                try {
+                    await track.applyConstraints({ advanced: [ { width: a.width, height: a.height, frameRate: 30 } ] });
+                    updateCameraInfo();
+                    return;
+                } catch (_) { /* continue */ }
+            }
         }
 
         function takePhoto(event) {
             event.preventDefault(); // Prevent form submission
 
             const video = document.getElementById('videoPreview');
+            const overlay = document.getElementById('detectionOverlay');
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -515,7 +592,6 @@ vehicleNumberInput.addEventListener('input', function() {
                 const dataTransfer = new DataTransfer();
                 dataTransfer.items.add(file);
                 input.files = dataTransfer.files;
-
                 // If this is the CNIC image, run OCR
                 if (currentCaptureTarget === 'profile') {
                     handleCNICImage(input);
@@ -532,6 +608,151 @@ vehicleNumberInput.addEventListener('input', function() {
             document.getElementById('cameraModal').style.display = 'none';
         }
 
+        function setupDetectionOverlay() {
+            const video = document.getElementById('videoPreview');
+            const overlay = document.getElementById('detectionOverlay');
+            overlay.width = video.clientWidth;
+            overlay.height = video.clientHeight;
+            overlay.style.width = video.clientWidth + 'px';
+            overlay.style.height = video.clientHeight + 'px';
+            updateCameraInfo();
+        }
+
+		function drawBox(ctx, x, y, w, h, color) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, w, h);
+        }
+
+		// Live ROI OCR status
+		let roiStatusColor = 'rgba(239,68,68,0.9)'; // red by default
+		let lastRoiOcr = 0;
+		let isRoiOcrRunning = false;
+		const ROI_OCR_INTERVAL_MS = 1000;
+
+		function computeBlurScore(imageData, width, height) {
+			// Simple sharpness metric based on gradient magnitude
+			const data = imageData.data;
+			let sum = 0;
+			let count = 0;
+			for (let y = 1; y < height - 1; y++) {
+				for (let x = 1; x < width - 1; x++) {
+					const idx = (y * width + x) * 4;
+					const gx = data[idx + 4] - data[idx - 4];
+					const gy = data[idx + width * 4] - data[idx - width * 4];
+					sum += Math.abs(gx) + Math.abs(gy);
+					count++;
+				}
+			}
+			return count ? (sum / count) : 0;
+		}
+
+		async function maybeOcrRoi(ts) {
+			if (!ocrWorker) return;
+			if (isRoiOcrRunning) return;
+			if (ts - lastRoiOcr < ROI_OCR_INTERVAL_MS) return;
+			lastRoiOcr = ts;
+			try {
+				isRoiOcrRunning = true;
+				const video = document.getElementById('videoPreview');
+				if (!video.videoWidth || !video.videoHeight) return;
+				// Build ROI from current video frame
+				const srcW = video.videoWidth;
+				const srcH = video.videoHeight;
+				const roiH = Math.round(srcH * 0.18);
+				const roiY = Math.round((srcH - roiH) / 2);
+				const roiCanvas = document.createElement('canvas');
+				// Downscale for speed
+				const targetW = Math.min(800, srcW);
+				const scale = targetW / srcW;
+				roiCanvas.width = targetW;
+				roiCanvas.height = Math.round(roiH * scale);
+				const roiCtx = roiCanvas.getContext('2d');
+				roiCtx.drawImage(video, 0, roiY, srcW, roiH, 0, 0, roiCanvas.width, roiCanvas.height);
+				// Light preprocessing
+				let img = roiCtx.getImageData(0, 0, roiCanvas.width, roiCanvas.height);
+				const d = img.data;
+				for (let i = 0; i < d.length; i += 4) {
+					const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+					const v = gray > 160 ? 255 : 0;
+					d[i] = d[i + 1] = d[i + 2] = v;
+				}
+				roiCtx.putImageData(img, 0, 0);
+				// Blur score
+				img = roiCtx.getImageData(0, 0, roiCanvas.width, roiCanvas.height);
+				const blurScore = computeBlurScore(img, roiCanvas.width, roiCanvas.height);
+				// Recognize
+				const { data } = await ocrWorker.recognize(roiCanvas);
+				const text = (data && data.text) ? data.text : '';
+				const conf = data && typeof data.confidence === 'number' ? data.confidence : 0;
+				const match = text.match(/(\d{5})[-\s]?(\d{7})[-\s]?(\d)/);
+				// Heuristics
+				const isMatch = !!match;
+				const isSharp = blurScore >= 18; // tune if needed
+				const isConfident = conf >= 80;
+				roiStatusColor = (isMatch && isSharp && isConfident) ? 'rgba(59,130,246,0.9)' : 'rgba(239,68,68,0.9)';
+				debugLog('Live OCR:', { conf: Math.round(conf), blur: Math.round(blurScore), match: isMatch, color: roiStatusColor });
+			} catch (e) {
+				roiStatusColor = 'rgba(239,68,68,0.9)';
+			} finally {
+				isRoiOcrRunning = false;
+			}
+		}
+
+        // Remove OCR analysis entirely
+        function analyzeFrameForCode() {}
+
+        let lastDrawTs = 0;
+        let lastBox = null;
+        function detectLoop(ts) {
+            const overlay = document.getElementById('detectionOverlay');
+            if (!overlay) return;
+            const ctx = overlay.getContext('2d', { willReadFrequently: true });
+            if (!ctx) return;
+
+            // Throttle drawing a bit
+            if (ts && ts - lastDrawTs < 50) {
+                requestAnimationFrame(detectLoop);
+                return;
+            }
+            lastDrawTs = ts || performance.now();
+
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+            if (lastBox && lastBox.w > 2 && lastBox.h > 2) {
+                drawBox(ctx, lastBox.x, lastBox.y, lastBox.w, lastBox.h, lastBox.color);
+            }
+            // Draw camera resolution label
+            const { label, color } = getResolutionLabel();
+            if (label) {
+                const badge = document.getElementById('cameraInfo');
+                if (badge) {
+                    badge.textContent = label;
+                    badge.style.border = '1px solid ' + color;
+                }
+            }
+            requestAnimationFrame(detectLoop);
+        }
+
+        function getResolutionLabel() {
+            const video = document.getElementById('videoPreview');
+            if (!video || !video.videoWidth || !video.videoHeight) return { label: '', color: '#888' };
+            const w = video.videoWidth;
+            const h = video.videoHeight;
+            let tag = 'LOW';
+            let color = '#ef4444';
+            if (w >= 1920 && h >= 1080) { tag = 'HIGH'; color = '#22c55e'; }
+            else if (w >= 1280 && h >= 720) { tag = 'MEDIUM'; color = '#f59e0b'; }
+            return { label: `${w}x${h} • ${tag} RES`, color };
+        }
+
+        function updateCameraInfo() {
+            const badge = document.getElementById('cameraInfo');
+            if (!badge) return;
+            const { label, color } = getResolutionLabel();
+            badge.textContent = label || 'Detecting camera...';
+            badge.style.border = '1px solid ' + color;
+        }
+
         function dataUrlToBlob(dataUrl) {
             const arr = dataUrl.split(',');
             const mime = arr[0].match(/:(.*?);/)[1];
@@ -542,6 +763,285 @@ vehicleNumberInput.addEventListener('input', function() {
                 u8arr[n] = bstr.charCodeAt(n);
             }
             return new Blob([u8arr], { type: mime });
+        }
+
+        function debugLog(){
+            try {
+                if (window && window.OCR_DEBUG) {
+                    console.log('[OCR]', ...arguments);
+                }
+            } catch (_) {}
+        }
+
+        // Preload OCR worker when DOM is ready and hook file input change for OCR
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!window.Tesseract) {
+                console.error('Tesseract.js not found on window');
+                const status = document.getElementById('ocrStatus');
+                if (status) { status.style.color = '#ef4444'; status.textContent = 'OCR library not loaded'; }
+            } else {
+                debugLog('Tesseract.js available');
+                ensureOcrWorker();
+            }
+            const profileInputEl = document.getElementById('profileInput');
+            if (profileInputEl) {
+                profileInputEl.addEventListener('change', () => handleCNICImage(profileInputEl));
+            }
+        });
+
+        // Preprocess image for better OCR: downscale, grayscale, simple threshold
+        function preprocessDataURLForOCR(dataUrl) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = function() {
+                    const maxDim = 1400; // try higher initial resolution
+                    const origW = img.width;
+                    const origH = img.height;
+                    let width = origW;
+                    let height = origH;
+                    const scale = Math.min(1, maxDim / Math.max(width, height));
+                    width = Math.round(width * scale);
+                    height = Math.round(height * scale);
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const imageData = ctx.getImageData(0, 0, width, height);
+                    const data = imageData.data;
+                    // grayscale + simple threshold
+                    let sum = 0, count = 0;
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i], g = data[i + 1], b = data[i + 2];
+                        const gray = (0.299 * r + 0.587 * g + 0.114 * b);
+                        sum += gray; count++;
+                    }
+                    const avg = sum / (count || 1);
+                    const th = Math.max(120, Math.min(190, Math.round(avg + 10))); // adaptive-ish threshold
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i], g = data[i + 1], b = data[i + 2];
+                        const gray = (0.299 * r + 0.587 * g + 0.114 * b);
+                        const v = gray > th ? 255 : 0;
+                        data[i] = data[i + 1] = data[i + 2] = v;
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+                    const result = canvas.toDataURL('image/png');
+                    debugLog('Preprocess complete', { original: { width: origW, height: origH }, processed: { width, height }, length: result.length });
+                    resolve({ dataUrl: result, width, height, originalWidth: origW, originalHeight: origH });
+                };
+                img.onerror = function(err) {
+                    debugLog('Preprocess image load error', err);
+                    resolve({ dataUrl, width: 0, height: 0, originalWidth: 0, originalHeight: 0, error: 'load_failed' });
+                };
+                img.src = dataUrl;
+            });
+        }
+
+        function cropCenterBand(dataUrl, ratio = 0.22) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = function() {
+                    const h = Math.round(img.height * ratio);
+                    const y = Math.max(0, Math.round((img.height - h) / 2));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, y, img.width, h, 0, 0, img.width, h);
+                    resolve(canvas.toDataURL('image/png'));
+                };
+                img.src = dataUrl;
+            });
+        }
+
+        function invertDataURL(dataUrl) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    for (let i = 0; i < data.length; i += 4) {
+                        data[i] = 255 - data[i];
+                        data[i + 1] = 255 - data[i + 1];
+                        data[i + 2] = 255 - data[i + 2];
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+                    resolve({ dataUrl: canvas.toDataURL('image/png'), width: img.width, height: img.height });
+                };
+                img.src = dataUrl;
+            });
+        }
+
+        async function recognizeWithParams(imageDataUrl, overrideParams, label) {
+            await ensureOcrWorker();
+            const params = overrideParams ? { ...baseOcrParams, ...overrideParams } : baseOcrParams;
+            await ocrWorker.setParameters(params);
+            const t0 = performance.now();
+            const { data } = await ocrWorker.recognize(imageDataUrl);
+            const t1 = performance.now();
+            const text = (data && data.text) ? data.text : '';
+            const conf = (data && typeof data.confidence === 'number') ? Math.round(data.confidence) : null;
+            debugLog('OCR result', { label, durationMs: Math.round(t1 - t0), conf, chars: text.length, sample: text.slice(0, 160).replace(/\n/g, ' ') });
+            return { text, conf };
+        }
+
+        // Try to extract a tight bbox for a CNIC using character symbols
+        function extractCnicBboxFromSymbols(symbols, regex) {
+            if (!Array.isArray(symbols) || symbols.length === 0) return null;
+            // Sort by y then x
+            const syms = symbols
+                .filter(s => s && s.text && /[0-9\-\s]/.test(s.text))
+                .map(s => ({
+                    ch: String(s.text),
+                    x0: s.bbox?.x0 ?? s.x ?? 0,
+                    y0: s.bbox?.y0 ?? s.y ?? 0,
+                    x1: s.bbox?.x1 ?? ((s.x ?? 0) + (s.w ?? 0)),
+                    y1: s.bbox?.y1 ?? ((s.y ?? 0) + (s.h ?? 0))
+                }))
+                .sort((a,b) => (a.y0 - b.y0) || (a.x0 - b.x0));
+
+            // Cluster symbols into lines by y overlap
+            const lines = [];
+            for (const sym of syms) {
+                const found = lines.find(line => Math.abs(line.y - sym.y0) < 12);
+                if (found) {
+                    found.syms.push(sym);
+                    found.y = (found.y * found.n + sym.y0) / (found.n + 1);
+                    found.n += 1;
+                } else {
+                    lines.push({ y: sym.y0, n: 1, syms: [sym] });
+                }
+            }
+            for (const line of lines) {
+                line.syms.sort((a,b) => a.x0 - b.x0);
+                // Build sequences across the line
+                let seq = '';
+                let seqBoxes = [];
+                const flush = () => {
+                    if (!seq) return null;
+                    const norm = seq.replace(/\s/g, '');
+                    const hasPattern = regex.test(seq) || (norm.length >= 13 && /\d{13}/.test(norm));
+                    if (hasPattern) {
+                        const x0 = Math.min(...seqBoxes.map(b => b.x0));
+                        const y0 = Math.min(...seqBoxes.map(b => b.y0));
+                        const x1 = Math.max(...seqBoxes.map(b => b.x1));
+                        const y1 = Math.max(...seqBoxes.map(b => b.y1));
+                        return { x0, y0, x1, y1 };
+                    }
+                    return null;
+                };
+                for (const s of line.syms) {
+                    const ch = s.ch;
+                    if (/[0-9\-\s]/.test(ch)) {
+                        seq += ch;
+                        seqBoxes.push({ x0: s.x0, y0: s.y0, x1: s.x1, y1: s.y1 });
+                    } else {
+                        const bb = flush();
+                        if (bb) return bb;
+                        seq = '';
+                        seqBoxes = [];
+                    }
+                }
+                const bb = flush();
+                if (bb) return bb;
+            }
+            return null;
+        }
+
+        // Fallback to server-side OCR when client OCR fails
+        async function serverOcrFallback(file) {
+            const status = document.getElementById('ocrStatus');
+            try {
+                if (status) { status.style.color = '#333'; status.textContent = 'Scanning on server...'; }
+                const form = new FormData();
+                form.append('image', file, file.name || 'cnic.png');
+                const resp = await fetch('/ocr/cnic', { method: 'POST', body: form });
+                debugLog('Server OCR response', { ok: resp.ok, status: resp.status });
+                const json = await resp.json().catch(() => ({}));
+                debugLog('Server OCR payload', json);
+                if (json && json.success && json.cnic) {
+                    const cnicInput = document.getElementById('cnicNumber');
+                    if (cnicInput) cnicInput.value = json.cnic;
+                    if (status) { status.style.color = '#228b22'; status.textContent = `CNIC detected: ${json.raw || json.cnic}`; }
+                    return true;
+                }
+                if (status) { status.style.color = '#ef4444'; status.textContent = 'CNIC not detected. Please try again with a clearer image.'; }
+                return false;
+            } catch (e) {
+                console.error('Server OCR error', e);
+                if (status) { status.style.color = '#ef4444'; status.textContent = 'CNIC not detected. Please try again with a clearer image.'; }
+                return false;
+            }
+        }
+
+        // Extract and autofill CNIC from an input[type=file]
+        async function handleCNICImage(fileInputEl) {
+            const status = document.getElementById('ocrStatus');
+            if (!fileInputEl || !fileInputEl.files || !fileInputEl.files[0]) return;
+            const file = fileInputEl.files[0];
+            debugLog('File selected', { name: file.name, type: file.type, sizeBytes: file.size });
+            try {
+                if (status) { status.style.color = '#333'; status.textContent = 'Scanning CNIC...'; }
+                const dataUrl = await new Promise((resolve, reject) => {
+                    const fr = new FileReader();
+                    fr.onload = () => resolve(fr.result);
+                    fr.onerror = reject;
+                    fr.readAsDataURL(file);
+                });
+                debugLog('FileReader complete', { dataUrlPrefix: String(dataUrl).slice(0, 30) });
+                // Attempt order: original -> preprocessed -> cropped band -> inverted cropped
+                const { text: t0, conf: c0 } = await recognizeWithParams(dataUrl, { tessedit_char_whitelist: '0123456789- ', tessedit_pageseg_mode: '7' }, 'cnic_raw');
+                debugLog('Client OCR confidence (raw)', c0);
+                let text = t0, conf = c0;
+                if (!(text && text.length)) {
+                    const pre = await preprocessDataURLForOCR(dataUrl);
+                    const r1 = await recognizeWithParams(pre.dataUrl || pre, { tessedit_char_whitelist: '0123456789- ', tessedit_pageseg_mode: '7' }, 'cnic');
+                    text = r1.text; conf = r1.conf;
+                }
+                debugLog('Client OCR confidence', conf);
+                const match = text && text.match(window.CNIC_REGEX);
+                const cnicInput = document.getElementById('cnicNumber');
+                if (match) {
+                    const raw = `${match[1]}-${match[2]}-${match[3]}`;
+                    const digits = `${match[1]}${match[2]}${match[3]}`;
+                    if (cnicInput) cnicInput.value = digits; // field expects no dashes
+                    if (status) { status.style.color = '#228b22'; status.textContent = `CNIC detected: ${raw}`; }
+                } else {
+                    debugLog('No match yet, trying cropped center band');
+                    const band = await cropCenterBand(dataUrl, 0.22);
+                    const r2 = await recognizeWithParams(band, { tessedit_char_whitelist: '0123456789- ', tessedit_pageseg_mode: '7' }, 'cnic_band');
+                    const match2 = r2.text && r2.text.match(window.CNIC_REGEX);
+                    if (match2) {
+                        const raw = `${match2[1]}-${match2[2]}-${match2[3]}`;
+                        const digits = `${match2[1]}${match2[2]}${match2[3]}`;
+                        if (cnicInput) cnicInput.value = digits;
+                        if (status) { status.style.color = '#228b22'; status.textContent = `CNIC detected: ${raw}`; }
+                    } else {
+                        debugLog('No match on band, trying inverted band');
+                        const inv = await invertDataURL(band);
+                        const r3 = await recognizeWithParams(inv.dataUrl || inv, { tessedit_char_whitelist: '0123456789- ', tessedit_pageseg_mode: '7' }, 'cnic_band_inverted');
+                        const match3 = r3.text && r3.text.match(window.CNIC_REGEX);
+                        if (match3) {
+                            const raw = `${match3[1]}-${match3[2]}-${match3[3]}`;
+                            const digits = `${match3[1]}${match3[2]}${match3[3]}`;
+                            if (cnicInput) cnicInput.value = digits;
+                            if (status) { status.style.color = '#228b22'; status.textContent = `CNIC detected: ${raw}`; }
+                        } else {
+                            await serverOcrFallback(file);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('OCR error', e);
+                await serverOcrFallback(file);
+            }
         }
 
         // Close camera when modal is clicked outside
@@ -582,64 +1082,6 @@ vehicleNumberInput.addEventListener('input', function() {
             });
         });
 
-        // CNIC OCR logic
-        document.getElementById('profileInput').addEventListener('change', function() {
-            handleCNICImage(this);
-        });
-
-        async function handleCNICImage(input) {
-            const file = input.files && input.files[0];
-            if (!file) return;
-
-            // Show loader and status
-            const cnicInput = document.getElementById('cnicNumber');
-            const ocrStatus = document.getElementById('ocrStatus');
-            const ocrLoader = document.getElementById('ocrLoader');
-            const ocrMessage = document.getElementById('ocrMessage');
-            ocrStatus.style.display = 'block';
-            ocrLoader.style.display = 'block';
-            ocrMessage.style.display = 'none';
-            cnicInput.value = 'Detecting...';
-
-            // Read file as data URL
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    // Run OCR
-                    const { data: { text } } = await Tesseract.recognize(
-                        e.target.result,
-                        'eng',
-                        {
-                            logger: m => {
-                                // Optionally show progress
-                            }
-                        }
-                    );
-                    // Extract CNIC number using regex
-                    const cnicRegex = /\b\d{5}-\d{7}-\d\b/;
-                    const match = text.match(cnicRegex);
-                    ocrLoader.style.display = 'none';
-                    ocrMessage.style.display = 'block';
-                    if (match) {
-                        cnicInput.value = match[0].replace(/-/g, '');
-                        ocrMessage.textContent = 'CNIC detected successfully!';
-                        ocrMessage.style.color = '#22c55e'; // green
-                    } else {
-                        cnicInput.value = '';
-                        ocrMessage.textContent = 'Could not detect a valid CNIC number. Please try again with a clearer image.';
-                        ocrMessage.style.color = '#ef4444'; // red
-                    }
-                    setTimeout(() => { ocrStatus.style.display = 'none'; }, 2500);
-                } catch (err) {
-                    ocrLoader.style.display = 'none';
-                    ocrMessage.style.display = 'block';
-                    cnicInput.value = '';
-                    ocrMessage.textContent = 'An error occurred during OCR. Please try again.';
-                    ocrMessage.style.color = '#ef4444';
-                    setTimeout(() => { ocrStatus.style.display = 'none'; }, 2500);
-                }
-            };
-            reader.readAsDataURL(file);
-        }
+        // Remove CNIC upload OCR processing
     </script>
 </html>

@@ -10,6 +10,7 @@ const passport = require('passport');
 const findOrCreate = require('mongoose-findorcreate');
 const passportLocalMongoose = require('passport-local-mongoose');
 const mongoose = require('mongoose');
+const Tesseract = require('tesseract.js');
 
 // mongodb+srv://mesum357:pDliM118811@cluster0.h3knh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -230,6 +231,43 @@ app.post('/upload-profile-image', ensureAuthenticated, upload.single('profileIma
             success: false,
             message: 'Error uploading image'
         });
+    }
+});
+
+// Server-side OCR for CNIC extraction
+const CNIC_REGEX = /(\d{5})[-\s]?(\d{7})[-\s]?(\d)/;
+
+app.post('/ocr/cnic', ensureAuthenticated, upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+
+        const imagePath = req.file.path;
+        const t0 = Date.now();
+        console.log('[OCR][server] file', { path: imagePath, size: req.file.size, mimetype: req.file.mimetype });
+        const result = await Tesseract.recognize(imagePath, 'eng', {
+            tessedit_char_whitelist: '0123456789- ',
+            tessedit_pageseg_mode: '7',
+            preserve_interword_spaces: '1',
+            user_defined_dpi: '300'
+        });
+        const t1 = Date.now();
+        const text = (result && result.data && result.data.text) ? result.data.text : '';
+        const conf = (result && result.data && typeof result.data.confidence === 'number') ? Math.round(result.data.confidence) : null;
+        console.log('[OCR][server] done', { durationMs: (t1 - t0), conf, chars: text.length, sample: text.slice(0, 160).replace(/\n/g, ' ') });
+        const match = text.match(CNIC_REGEX);
+
+        if (match) {
+            const raw = `${match[1]}-${match[2]}-${match[3]}`;
+            const digits = `${match[1]}${match[2]}${match[3]}`;
+            return res.json({ success: true, cnic: digits, raw });
+        }
+
+        return res.json({ success: false, message: 'CNIC not detected' });
+    } catch (error) {
+        console.error('Server OCR error:', error);
+        return res.status(500).json({ success: false, message: 'OCR failed' });
     }
 });
 app.get("/", ensureAuthenticated, async function(req, res) {
