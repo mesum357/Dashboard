@@ -361,33 +361,42 @@ app.get("/login", function(req, res) {
     });
 });
 
-app.post("/register", function(req, res) {
+app.get("/register-user", function(req, res) {
+    if (req.isAuthenticated()) {
+        return res.redirect("/");
+    }
+    res.render("register", {
+        isAuthenticated: false,
+        title: "Register",
+        path: "/register-user"
+    });
+});
+
+app.post("/register-user", function(req, res) {
     // Check if username and password are provided
     if (!req.body.username || !req.body.password) {
-        return res.status(400).json({
-            success: false,
-            message: "Username and password are required"
+        return res.render("register", {
+            isAuthenticated: false,
+            title: "Register",
+            path: "/register-user",
+            error: "Username and password are required"
         });
     }
 
     User.register({ username: req.body.username }, req.body.password, function(err, user) {
         if (err) {
             console.error(err);
-            return res.status(400).json({
-                success: false,
-                message: "Registration failed",
-                error: err.message
+            return res.render("register", {
+                isAuthenticated: false,
+                title: "Register",
+                path: "/register-user",
+                error: "Registration failed: " + err.message
             });
         }
         
-        // Don't auto-login for API usage, just return success
-        res.status(201).json({
-            success: true,
-            message: "User registered successfully",
-            user: {
-                id: user._id,
-                username: user.username
-            }
+        // Auto-login after successful registration
+        passport.authenticate("local")(req, res, function() {
+            res.redirect("/");
         });
     });
 });
