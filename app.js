@@ -84,7 +84,6 @@ const userSchema = new mongoose.Schema({
     username: String,
     password: String,
     googleId: String,
-    email: String,
     profileImage: String,
     createdAt: {
         type: Date,
@@ -98,7 +97,7 @@ userSchema.plugin(findOrCreate);
 const User = mongoose.model('User', userSchema);
 
 // Passport configuration
-passport.use(User.createStrategy());
+passport.use('local', User.createStrategy());
 
 passport.serializeUser(function(user, done) {
     done(null, user.id);
@@ -106,9 +105,9 @@ passport.serializeUser(function(user, done) {
 
 passport.deserializeUser(async function(id, done) {
     try {
-        let user = await SubAdmin.findById(id);
+        let user = await User.findById(id);
         if (!user) {
-            user = await User.findById(id);
+            return done(null, false);
         }
         done(null, user);
     } catch (err) {
@@ -132,8 +131,7 @@ async function(req, accessToken, refreshToken, profile, done) {
         if (!user) {
             user = await User.create({
                 googleId: profile.id,
-                username: profile.emails[0].value,
-                email: profile.emails[0].value
+                username: profile.emails[0].value
             });
         }
         
@@ -383,14 +381,41 @@ app.post("/register-user", function(req, res) {
         });
     }
 
-    User.register({ username: req.body.username }, req.body.password, function(err, user) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(req.body.username)) {
+        return res.render("register", {
+            isAuthenticated: false,
+            title: "Register",
+            path: "/register-user",
+            error: "Please enter a valid email address"
+        });
+    }
+
+    User.register({ 
+        username: req.body.username
+        // Don't set email field to avoid index conflicts
+    }, req.body.password, function(err, user) {
         if (err) {
             console.error(err);
+            let errorMessage = "Registration failed";
+            
+            // Handle specific error cases
+            if (err.code === 11000) {
+                if (err.keyPattern && err.keyPattern.email) {
+                    errorMessage = "An account with this email already exists";
+                } else if (err.keyPattern && err.keyPattern.username) {
+                    errorMessage = "This username is already taken";
+                }
+            } else if (err.name === 'ValidationError') {
+                errorMessage = "Invalid data provided";
+            }
+            
             return res.render("register", {
                 isAuthenticated: false,
                 title: "Register",
                 path: "/register-user",
-                error: "Registration failed: " + err.message
+                error: errorMessage
             });
         }
         
@@ -775,22 +800,6 @@ function ensureSubAdminAuthenticated(req, res, next) {
     }
     res.redirect('/subadmin-login');
 }
-
-passport.serializeUser(function(user, done) {
-    done(null, user.id);
-});
-
-passport.deserializeUser(async function(id, done) {
-    try {
-        let user = await SubAdmin.findById(id);
-        if (!user) {
-            user = await User.findById(id);
-        }
-        done(null, user);
-    } catch (err) {
-        done(err, null);
-    }
-});
 
 // Registration route for SubAdmin
 app.post("/subadmin-form", function(req, res) {

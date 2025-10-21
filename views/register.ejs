@@ -283,9 +283,14 @@
         <div class="form-header">
             <h2>Create Account</h2>
             <p>Sign up to get started with your new account</p>
+            <% if (typeof error !== 'undefined' && error) { %>
+                <div style="background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
+                    <%= error %>
+                </div>
+            <% } %>
         </div>
         
-        <form action="/register" method="post" id="registration-form">
+        <form action="/register-user" method="post" id="registration-form">
             <div class="form-group">
                 <label for="email">Email</label>
                 <input 
